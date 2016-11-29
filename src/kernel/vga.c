@@ -48,7 +48,7 @@ static void scroll()
 void cls()
 {
 	int		x, y;
-	struct vga_char blank = { ' ', COL_LIGHTGREY, COL_BLACK };
+	struct vga_char blank = { ' ', VGA_COLOR_LIGHTGREY, VGA_COLOR_BLACK };
 
 	for ( y = 0; y < 25; y++ )
 	{
@@ -69,8 +69,8 @@ void vga_init()
 	move_cur();
 	vga_mem		= (struct vga_char *) 0xb8000;
 	color.ch	= ' ';
-	color.fc	= COL_LIGHTGREY;
-	color.bc	= COL_BLACK;
+	color.fc	= VGA_COLOR_LIGHTGREY;
+	color.bc	= VGA_COLOR_BLACK;
 }
 
 

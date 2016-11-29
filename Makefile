@@ -1,6 +1,6 @@
 # makefile
 
-.PHONY: init install run fs fsck clean
+.PHONY: init run fs fsck clean
 .IGNORE: init
 
 MAKE = make -r
@@ -20,9 +20,17 @@ CFLAGS = -c -O0 -Wall -Werror -nostdinc -fno-builtin -fno-stack-protector -funsi
 ROOTFS = bin/rootfs
 OBJS = bin/loader.o bin/main.o bin/asm.o bin/vga.o bin/string.o
 
+# default task
+default: Makefile
+	$(MAKE) bin/floppy.raw
+	$(MAKE) bin/floppy.img
+
 # create a 1.44MB floppy include kernel and bootsector
-bin/floppy.img: boot/floppy.asm bin/bootsect.bin bin/kernel 
+bin/floppy.raw: boot/floppy.asm bin/bootsect.bin bin/kernel 
 	$(AS) -I ./bin/ -f bin -l lst/floppy.s $< -o $@ 
+	
+bin/floppy.img:
+	$(IMG) convert -f raw -O qcow2 bin/floppy.raw bin/floppy.img
 
 # bootsector
 bin/bootsect.bin: boot/bootsect.asm 
@@ -50,24 +58,22 @@ init:
 	mkdir bin
 	mkdir $(ROOTFS)
 
-default: Makefile
-	$(MAKE) bin/floppy.img
-
 # make a disk with minix v1 file system
 fs: 
 	$(DEL) bin/rootfs.img
-	$(IMG) create -f qcow2 bin/rootfs.img 10M
-	$(MKFS) bin/rootfs.img -1 -n14
-	sudo mount -o loop -t minix bin/rootfs.img $(ROOTFS)
+	$(IMG) create -f raw bin/rootfs.raw 10M
+	$(MKFS) bin/rootfs.raw -1 -n14
+	sudo mount -o loop -t minix bin/rootfs.raw $(ROOTFS)
 	mkdir $(ROOTFS)/bin
 	mkdir $(ROOTFS)/share
 	cp usr/logo.txt $(ROOTFS)/share
 	sleep 1
 	sudo umount $(ROOTFS)
+	$(IMG) convert -f raw -O qcow2 bin/rootfs.raw bin/rootfs.img
 
 # check root file system
 fsck:
-	$(FSCK) -fsl bin/rootfs.img
+	$(FSCK) -fsl bin/rootfs.raw
 
 # run with qemu
 run:

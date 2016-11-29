@@ -1,4 +1,4 @@
 target remote localhost:1234
 symbol-file bin/kernel.elf
-break os_main
-continue
+#b os_main
+c

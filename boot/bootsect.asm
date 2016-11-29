@@ -170,9 +170,9 @@ succ:
 msg_boot:
     db "[Bootsector] loading...",13,10,0
 msg_err:
-    db "[Bootsector] load error",13,10,0
+    db "[Bootsector] error",13,10,0
 msg_succ:
-    db "[Bootsector] load success",13,10,0
+    db "[Bootsector] ok",13,10,0
 msg_temp:
     db 0,0,0
 msg_get_mem_map_err:

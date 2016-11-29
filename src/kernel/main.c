@@ -1,6 +1,7 @@
 /* std */
 #include <type.h>
 #include <asm.h>
+#include <debug.h>
 /* vga */
 #include <vga.h>
 /* lib */
@@ -11,7 +12,7 @@ void test_time(void)
 {
     int i;
     vga_setcolor(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
-    for (i=0;; i++)
+    for (i=0; i<1000; i++)
     {
         delay(1);
         print("Time: %d\r", i);
@@ -21,6 +22,8 @@ void test_time(void)
 int os_main(void)
 {
     vga_init();
+    
+    delay(1000);
 
     cls();
 
@@ -29,6 +32,8 @@ int os_main(void)
     puts("\n");
     
     test_time();
+    
+    panic("Error");
 
 LOOP:
     hlt();

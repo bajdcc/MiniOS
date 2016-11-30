@@ -9,8 +9,10 @@
 
 // lib
 #include <print.h>
+// proc
+#include <proc.h>
 
-void print_status(){
+void print_status() {
     uint16_t reg1, reg2, reg3, reg4;
     __asm__ __volatile__(     "mov %%cs, %0;"
             "mov %%ds, %1;"
@@ -25,12 +27,16 @@ void print_status(){
     print("ss: %x\n", reg4);
 }
 
-void panic(const char *msg){
+void panic(const char *msg) {
     cli();
 
     vga_setcolor(VGA_COLOR_RED, VGA_COLOR_BLACK);
 
     print("***** KERNEL PANIC *****\n");
+    
+    if (proc) {
+        print("Current proc: `%s`(PID: %d)\n", proc->name, proc->pid);
+    }
 
     print("Message: %s\n", msg);
     print("\n");

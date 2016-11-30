@@ -1,6 +1,8 @@
 #ifndef __CONST_H
 #define __CONST_H
 
+#include <debug.h>
+
 typedef char bool;
 #define TRUE    1
 #define FALSE   0

@@ -10,5 +10,6 @@ typedef char* va_list;
 #define va_end(ap) (ap = (char*) 0)
 
 void print(const char *fmt, ...);
+void vsprint(char *buf, const char *fmt, va_list args);
 
 #endif 

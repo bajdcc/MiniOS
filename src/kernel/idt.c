@@ -5,6 +5,7 @@
 
 // std
 #include <type.h>
+#include <print.h>
 // x86
 #include <pm.h>
 // lib

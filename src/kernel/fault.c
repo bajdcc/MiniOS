@@ -146,7 +146,7 @@ void fault_handler(struct int_frame *r) {
             print("error code: %d\n", r->err_code);
             panic(fault_msg[r->int_no]);
         } else {
-            panic("Unkonwn Interrupt, System Halted!\n");
+            panic("Unknown Interrupt, System Halted!\n");
         }
     }
 

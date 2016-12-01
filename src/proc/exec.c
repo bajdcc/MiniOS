@@ -38,7 +38,6 @@ int exec(char *path, char **argv) {
     if (iread(ip, (char *)&eh, 0, sizeof(eh)) < (int)sizeof(eh)) {
         goto bad;
     }
-    // print_elfhdr(&eh);
 
     if (eh.magic != ELF_MAGIC) {
         goto bad;

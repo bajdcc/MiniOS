@@ -16,7 +16,7 @@ struct int_frame {
     uint32_t gs;    // 16 bits
     uint32_t fs;    // 16 bits
     uint32_t es;    // 16 bits
-    uint32_t ds;          // 16 bits
+    uint32_t ds;    // 16 bits
 
     /* registers save by pusha */
     uint32_t edi;

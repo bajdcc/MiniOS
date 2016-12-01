@@ -34,15 +34,11 @@ UOBJS := $(UPROGS:%=%.o)
 
 # default task
 default: Makefile
-	$(MAKE) bin/floppy.raw
 	$(MAKE) bin/floppy.img
 
 # create a 1.44MB floppy include kernel and bootsector
-bin/floppy.raw: boot/floppy.asm bin/bootsect.bin bin/kernel 
+bin/floppy.img: boot/floppy.asm bin/bootsect.bin bin/kernel 
 	$(AS) -I ./bin/ -f bin -l lst/floppy.s $< -o $@ 
-	
-bin/floppy.img:
-	$(IMG) convert -f raw -O qcow2 bin/floppy.raw bin/floppy.img
 
 # bootsector
 bin/bootsect.bin: boot/bootsect.asm 
@@ -82,24 +78,26 @@ init:
 # make a disk with minix v1 file system
 fs: $(UPROGS)
 	$(DEL) bin/rootfs.img
-	$(IMG) create -f raw bin/rootfs.raw 10M
-	$(MKFS) bin/rootfs.raw -1 -n14
-	sudo mount -o loop -t minix bin/rootfs.raw $(ROOTFS)
+	$(IMG) create -f raw bin/rootfs.img 10M
+	$(MKFS) bin/rootfs.img -1 -n14
+	sudo mount -o loop -t minix bin/rootfs.img $(ROOTFS)
 	mkdir $(ROOTFS)/bin
 	mkdir $(ROOTFS)/share
 	cp usr/logo.txt $(ROOTFS)/share
 	for i in $(UPROGS); do cp $$i $(ROOTFS)/bin; done
 	sleep 1
 	sudo umount $(ROOTFS)
-	$(IMG) convert -f raw -O qcow2 bin/rootfs.raw bin/rootfs.img
 
 # check root file system
 fsck:
-	$(FSCK) -fsl bin/rootfs.raw
+	$(FSCK) -fsl bin/rootfs.img
 
 # run with qemu
 run:
-	$(QEMU) -S -s -fda bin/floppy.img -hda bin/rootfs.img -boot a &
+	$(QEMU) -S -s \
+		-drive file=bin/floppy.img,if=floppy,format=raw \
+		-drive file=bin/rootfs.img,if=ide,format=raw,cyls=20,heads=16,secs=63 \
+	    -boot a -m 512 &
 	sleep 1
 	$(GDB) -x script/gdbinit
 

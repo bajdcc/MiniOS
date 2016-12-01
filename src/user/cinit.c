@@ -1,19 +1,19 @@
 #include <usys.h>
 #include <uio.h>
 
-int main(){
+int main() {
     char *argv[] = {"sh", 0};
 
-    if (uio_init() < 0){
+    if (uio_init() < 0) {
         goto bad;     
     }
 
     int pid = _fork();
-    if (pid == 0){
-        if (_exec("/bin/sh", argv) < 0){
+    if (pid == 0) {
+        if (_exec("/bin/sh", argv) < 0) {
             goto bad;
         }
-    } else if (pid < 0){
+    } else if (pid < 0) {
         goto bad;
     }
 

@@ -3,7 +3,12 @@ MiniOS
 Simple x86-based OS.
 
 
-###Build requirements
+###开发阶段
+
+1. [0.2.0]从零开始，保留核心文件，慢慢添加功能，实现Hello world
+
+
+###构建工具
 Platform: Linux
 * make
 * nasm
@@ -17,7 +22,7 @@ sudo apt install make nasm gcc binutils cgdb qemu
 sudo ln -s /usr/bin/qemu-system-i386 /usr/bin/qemu
 ```
 
-###How to compile  
+###编译并运行
 ```shell
 make init   # only for first time
 make fs     # build root file system and user routines, root privilege required

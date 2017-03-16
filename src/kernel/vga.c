@@ -3,12 +3,9 @@
  * you must invoke init_vga before use other func
  */
 
-/* std */
 #include <type.h>
 #include <asm.h>
 #include <vga.h>
-
-/* lib */
 #include <string.h>
 
 

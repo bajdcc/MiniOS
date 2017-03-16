@@ -1,15 +1,14 @@
 /* print.c
- * this file include a useful funcion print()
+ * this file include a useful funcion printk()
  * suppose %d %x %c %s now
  */
 
-/* std */
 #include <type.h>
 #include <vga.h>
-/* lib */
 #include <string.h>
 #include <print.h>
 
+// 数字转字符串
 char* itoa( int value, char *str, int radix )
 {
 	char	reverse[36];
@@ -41,7 +40,7 @@ char* itoa( int value, char *str, int radix )
 	return(str);
 }
 
-
+// 无符号数字转字符串
 char* uitoa( uint32_t value, char *str, int radix )
 {
 	char	reverse[36];
@@ -65,7 +64,7 @@ char* uitoa( uint32_t value, char *str, int radix )
 	return(str);
 }
 
-
+// 字符串格式化
 void vsprint( char *buf, const char *fmt, va_list args )
 {
 	char	*p;
@@ -104,10 +103,10 @@ void vsprint( char *buf, const char *fmt, va_list args )
 	*p = '\0';
 }
 
-
-void print( const char *fmt, ... )
+// 内核打印
+void printk( const char *fmt, ... )
 {
-	char	buf[256];
+	char	buf[256]; // 最多一次输出256B
 	va_list args;
 
 	memset( buf, 0, sizeof(buf) );

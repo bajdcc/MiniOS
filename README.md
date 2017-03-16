@@ -11,7 +11,11 @@ Platform: Linux
 * binutils
 * cgdb
 * qemu
-     
+
+```shell
+sudo apt install make nasm gcc binutils cgdb qemu
+sudo ln -s /usr/bin/qemu-system-i386 /usr/bin/qemu
+```
 
 ###How to compile  
 ```shell

@@ -1,6 +1,4 @@
 target remote localhost:1234
 symbol-file bin/kernel.elf
-b fault_handler
-b panic
-b exec
+b os_main
 c

@@ -1,4 +1,5 @@
 /* asm.c
+ * 汇编指令
  * some short, assembly function.
  */
 // std

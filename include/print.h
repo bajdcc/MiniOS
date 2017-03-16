@@ -9,7 +9,7 @@ typedef char* va_list;
 #define va_arg(ap,t) ( *(t *)((ap += _INTSIZEOF(t)) - _INTSIZEOF(t)) )
 #define va_end(ap) (ap = (char*) 0)
 
-void print(const char *fmt, ...);
+void printk(const char *fmt, ...);
 void vsprint(char *buf, const char *fmt, va_list args);
 
 #endif 

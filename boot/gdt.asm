@@ -1,4 +1,4 @@
-; reference from <Orange's>
+; 参考自<Orange's>
 
 ; 描述符类型
 DA_32       EQU 0x4000  ; 32 位段
@@ -29,11 +29,11 @@ DA_386TGATE EQU   0x8f  ; 386 陷阱门类型值
 
 ; Selector Attribute
 SA_RPL0     EQU 0   ; ┓
-SA_RPL1     EQU 1   ; ┣ RPL
+SA_RPL1     EQU 1   ; ┣ RPL(Request Privilege Level)
 SA_RPL2     EQU 2   ; ┃
 SA_RPL3     EQU 3   ; ┛
 
-SA_TIG      EQU 0   ; ┓TI
+SA_TIG      EQU 0   ; ┓TI(Table Indicator)
 SA_TIL      EQU 4   ; ┛
 
 ; constant for Pageing
@@ -62,10 +62,10 @@ PG_USU      EQU 4   ; U/S 属性位值, 用户级
 ;        DCount:    db
 ;        Attr:      db
 %macro Gate 4
-    DW  (%2 & 0xffff)                       ; 偏移1
-    DW  %1                                  ; 选择子
-    DW  (%3 & 0x1f) | ((%4 << 8) & 0xff00)  ; 属性
-    DW  ((%2 >> 16) & 0xffff)               ; 偏移2
+    DW  (%2 & 0xffff)                       ; Offset1 偏移1
+    DW  %1                                  ; Selector 选择子
+    DW  (%3 & 0x1f) | ((%4 << 8) & 0xff00)  ; Attr 属性
+    DW  ((%2 >> 16) & 0xffff)               ; Offset2 偏移2
 %endmacro ; 共 8 字节
 
 ; usage segment reg, selector, gdt entry

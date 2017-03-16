@@ -1,11 +1,9 @@
-/* string.c
+/* memory.c
+ * 字符串处理
  * this file includes some library functions to process string
  */
 
-/* std */
 #include <type.h>
-
-/* lib */
 #include <string.h>
 
 void *memcpy( void *dest, const void *src, uint32_t count )

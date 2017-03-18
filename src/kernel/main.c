@@ -6,6 +6,7 @@
 
 #include <gdt.h>
 #include <idt.h>
+#include <isr.h>
 
 void print_ok(void)
 {
@@ -30,6 +31,10 @@ void init(void)
     idt_init();
     print_ok();
     puts(" init idt...\n");
+
+    isr_init();
+    print_ok();
+    puts(" init isr...\n");
 }
 
 int os_main(void)
@@ -37,7 +42,7 @@ int os_main(void)
     init();
 
     vga_setcolor(VGA_COLOR_LIGHTBLUE, VGA_COLOR_BLACK);
-
+    
     puts("\n");
     puts("Hello world!  --- OS by bajdcc \n");
     puts("\n");

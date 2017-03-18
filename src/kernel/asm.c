@@ -3,6 +3,8 @@
  * some short, assembly function.
  */
 
+/* http://www.cnblogs.com/taek/archive/2012/02/05/2338838.html */
+
 #include <type.h>
 #include <asm.h> 
 

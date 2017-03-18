@@ -100,3 +100,91 @@ flush2:
 idt_load:
     lidt [idtp] ; load idt
     ret
+
+; ####################### 中断服务 #######################
+
+; ***** 0-31号中断 exception int 0 - int 31
+%macro m_fault 1
+[global fault%1]
+fault%1:
+    cli
+    ; int 8,10-14,17,30 have error code
+    %if %1 != 17 && %1 != 30 && (%1 < 8 || %1 > 14)
+        push 0 ; fake error code
+    %endif
+    push %1
+    jmp _isr_stub ; 中断处理程序
+%endmacro 
+
+%assign i 0
+%rep 32
+    m_fault i
+    %assign i i + 1
+%endrep
+
+; ***** 32-47号中断 Interrupt Request int 32 - 47
+%macro m_irq 1
+[global irq%1]
+irq%1:
+    cli
+    push 0
+    push %1+32
+    jmp _isr_stub
+%endmacro
+
+%assign i 0
+%rep 16 
+    m_irq i   
+%assign i i+1
+%endrep
+
+; ***** Unknown Interrupt
+; 255 is a flag of unknown int
+; so please note that we can't use it 
+[global isr_unknown]
+isr_unknown:
+    cli
+    push 0
+    push 255
+    jmp _isr_stub
+
+
+; ####################### 中断服务例程 #######################
+
+; kernel/isr.c 
+[global _isr_stub_ret]
+[extern isr_stub]
+; a common ISR func, sava the context of CPU 
+; call C func to process fault
+; at last restore stack frame
+_isr_stub:
+    ; 保存现场
+    pusha
+    push ds
+    push es
+    push fs
+    push gs
+
+    mov ax, SEL_KERN_DATA ; 内核数据段
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+    mov ss, ax
+
+    mov eax, esp
+    push eax
+
+    mov eax, isr_stub
+    call eax ; 中断处理
+    pop eax
+
+_isr_stub_ret:
+    ; 恢复现场
+    pop gs
+    pop fs
+    pop es
+    pop ds
+    popa
+    add esp, 8
+    iret

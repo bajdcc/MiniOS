@@ -60,6 +60,38 @@ entry:
     mov si, msg_boot
     call _print16
 
+;============================================================
+; 获取内存布局
+; http://blog.csdn.net/yes_life/article/details/6839453
+
+ARD_ENTRY equ 0x500
+ARD_COUNT equ 0x400
+
+get_mem_map:
+    mov dword [ARD_COUNT], 0
+    mov ax, 0
+    mov es, ax
+    xor ebx, ebx           ; If this is the first call, EBX must contain zero.
+    mov di, ARD_ENTRY      ; ES:DI-> Buffer Pointer
+
+get_mem_map_loop:
+    mov eax, 0xe820        ; code
+    mov ecx, 20            ; Buffer Size, min = 20
+    mov edx, 0x534D4150    ; Signature, edx = "SMAP"
+    int 0x15
+    jc get_mem_map_fail    ; Non-Carry - indicates no error
+    add di, 20             ; Buffer Pointer += 20(sizeof structure)
+    inc dword [ARD_COUNT]  ; Inc ADR count
+    cmp ebx, 0             ; Anything else?
+    jne get_mem_map_loop 
+    jmp get_mem_map_ok
+
+get_mem_map_fail:
+    mov si, msg_get_mem_map_err
+    call _print16
+    hlt
+
+get_mem_map_ok:
 
 ;============================================================
 ; 从软盘中读取内核代码

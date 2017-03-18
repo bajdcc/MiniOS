@@ -20,7 +20,7 @@ CFLAGS = -c -O0 -Wall -Werror -nostdinc -fno-builtin -fno-stack-protector -funsi
 ROOTFS = bin/rootfs
 OBJS = bin/loader.o bin/main.o bin/asm.o bin/vga.o bin/string.o bin/print.o bin/debug.o \
 		 bin/gdt.o bin/idt.o bin/isr.o bin/irq.o bin/fault.o \
-		 bin/pmm.o
+		 bin/pmm.o bin/vmm.o
 
 # default task
 default: Makefile

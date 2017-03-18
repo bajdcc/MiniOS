@@ -8,6 +8,7 @@
 #include <idt.h>
 #include <isr.h>
 #include <pmm.h>
+#include <vmm.h>
 
 void print_ok(void)
 {
@@ -42,6 +43,10 @@ void init(void)
     puts(" init pmm...");
 
     printk(" size: 0x%x\n", pmm_size());
+
+    vmm_init();
+    print_ok();
+    puts(" init vmm...\n");
 }
 
 int os_main(void)

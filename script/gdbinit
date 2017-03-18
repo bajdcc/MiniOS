@@ -1,4 +1,5 @@
 target remote localhost:1234
 symbol-file bin/kernel.elf
-b os_main
+#b os_main
+b vmm_map
 c

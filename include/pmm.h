@@ -26,10 +26,12 @@ struct ard_entry {
     uint32_t type;
 }__attribute__((packed));
 
+// 这里的页框是物理页框，对应的是物理地址，而不是虚拟地址
+
 // 页框初始化
 void pmm_init();
 
-// 页表大小
+// 物理页表大小
 uint32_t pmm_size();
 
 // 申请页框

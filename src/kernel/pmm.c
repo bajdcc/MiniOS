@@ -1,5 +1,5 @@
 /* pmm.h
- * 内存物理页框分配
+ * 内存物理页分配
  */
  
 #include <type.h>
@@ -12,8 +12,8 @@ extern uint8_t data;
 extern uint8_t bss;
 extern uint8_t kernend;   // 内核结束地址
 
-static uint32_t pmm_stack[PAGE_MAX_SIZE + 1]; // 页表
-static uint32_t pmm_stack_top = 0; // 页表栈顶
+static uint32_t pmm_stack[PAGE_MAX_SIZE + 1]; // 可用内存表
+static uint32_t pmm_stack_top = 0; // 栈顶
 static uint32_t pmm_count = 0;
 static uint32_t mem_size = 0;
 
@@ -33,7 +33,7 @@ void pmm_init() {
 
            while (addr < limit && addr <= PMM_MAX_SIZE) {
                mem_size += PMM_PAGE_SIZE;
-               pmm_stack[pmm_stack_top++] = addr;   
+               pmm_stack[pmm_stack_top++] = addr; // 将空闲内存映射到pmm_stack中
                addr += PMM_PAGE_SIZE;
                pmm_count++;
            }

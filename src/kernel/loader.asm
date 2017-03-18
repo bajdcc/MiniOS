@@ -75,3 +75,28 @@ outloop:
 msg:
     db "=== [ OS ENTRY ] ===", 0
 
+; ####################### 内核专用 #######################
+
+; ********** gdt.c
+[global gdt_flush]
+[extern gp]
+
+gdt_flush:      
+    lgdt [gp] ; load gdt
+    mov ax, SEL_KERN_DATA
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+    mov ss, ax
+    jmp SEL_KERN_CODE:flush2
+flush2:
+    ret
+
+; ********** idt.c
+[global idt_load]
+[extern idtp]
+
+idt_load:
+    lidt [idtp] ; load idt
+    ret

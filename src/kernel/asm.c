@@ -2,7 +2,7 @@
  * 汇编指令
  * some short, assembly function.
  */
-// std
+
 #include <type.h>
 #include <asm.h> 
 

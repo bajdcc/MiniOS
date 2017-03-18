@@ -4,6 +4,9 @@
 #include <print.h>
 #include <debug.h>
 
+#include <gdt.h>
+#include <idt.h>
+
 void print_ok(void)
 {
     putchar('[');
@@ -19,6 +22,14 @@ void init(void)
 
     print_ok();
     puts(" init vga...\n");
+
+    gdt_init();
+    print_ok();
+    puts(" init gdt...\n");
+
+    idt_init();
+    print_ok();
+    puts(" init idt...\n");
 }
 
 int os_main(void)

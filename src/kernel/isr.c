@@ -8,6 +8,7 @@
 #include <idt.h>
 #include <irq.h>
 #include <fault.h>
+#include <syscall.h>
 
 extern void isr_unknown(); // see loader.asm
 
@@ -28,6 +29,8 @@ void isr_stub(struct interrupt_frame *r) {
         fault_handler(r); // 默认中断处理
     } else if (r->int_no < ISR_IRQ0 + 16) {
         irq_handler(r); // 指定中断处理
+    } else if (r->int_no == ISR_SYSCALL) {
+        syscall(); // 系统调用
     } else {
         panic("isr_stub: wrong interrupt number"); // 中断号错误
     }

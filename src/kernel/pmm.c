@@ -47,7 +47,7 @@ uint32_t pmm_size() {
 
 uint32_t pmm_alloc() {
     uint32_t addr = pmm_stack[--pmm_stack_top];
-    memset((void *)addr, 0, PMM_PAGE_SIZE);
+    memset((void *)addr, 0, PMM_PAGE_SIZE); // 申请的内容清零
     return addr;
 }
 

@@ -9,6 +9,8 @@
 #include <isr.h>
 #include <pmm.h>
 #include <vmm.h>
+#include <syscall.h>
+#include <proc.h>
 
 void print_ok(void)
 {
@@ -47,6 +49,14 @@ void init(void)
     vmm_init();
     print_ok();
     puts(" init vmm...\n");
+
+    sys_init();
+    print_ok();
+    puts(" init syscall...\n");
+
+    proc_init();
+    print_ok();
+    puts(" init proc...\n");
 }
 
 int os_main(void)
@@ -58,6 +68,9 @@ int os_main(void)
     puts("\n");
     puts("Hello world!  --- OS by bajdcc \n");
     puts("\n");
+
+    // 开始进程调度
+    schedule();
 
 LOOP:
     hlt();

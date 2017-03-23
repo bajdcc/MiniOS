@@ -63,7 +63,6 @@ void vmm_map(pde_t *pgdir, uint32_t va, uint32_t pa, uint32_t flags) {
     if (!pte) { // 缺页
         if (va >= USER_BASE) { // 若是用户地址则转换
             pte = (pte_t *)pmm_alloc(); // 申请物理页框，用作新页表
-            memset(pte, 0, PAGE_SIZE); // 空页
             pgdir[pde_idx] = (uint32_t)pte | PTE_P | flags; // 设置页表
             pte[pte_idx] = (pa & PAGE_MASK) | PTE_P | flags; // 设置页表项
         } else { // 内核地址不转换

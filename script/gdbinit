@@ -1,5 +1,7 @@
 target remote localhost:1234
 symbol-file bin/kernel.elf
 #b os_main
-b vmm_map
+b sched
+b context_switch
+b fork
 c

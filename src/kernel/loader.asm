@@ -7,7 +7,7 @@ SEL_KERN_CODE   EQU 0x8
 ; kernel data segment selector
 SEL_KERN_DATA   EQU 0x10
 ; vedio memory
-SEL_KERN_VEDIO  EQU 0x18
+SEL_KERN_VIDEO  EQU 0x18
 ; 用户地址起始
 USER_BASE       EQU 0xc0000000
 
@@ -24,7 +24,7 @@ start:
     mov ds, ax
     mov ax, SEL_KERN_DATA
     mov es, ax
-    mov ax, SEL_KERN_VEDIO
+    mov ax, SEL_KERN_VIDEO
     mov gs, ax
     mov ax, SEL_KERN_DATA
     mov ss, ax
@@ -188,3 +188,60 @@ _isr_stub_ret:
     popa
     add esp, 8
     iret
+
+
+; ####################### 进程切换 #######################
+; kernel/proc.c
+; void _context_switch(struct context **old, struct context* new);
+; http://wiki.osdev.org/Context_Switching
+
+[global _context_switch]
+_context_switch:
+    mov eax, [esp + 4]  ; old
+    mov edx, [esp + 8]  ; new
+
+    ; eip has been save when call _context_switch
+    push ebp
+    push ebx
+    push esi
+    push edi
+
+    ; switch stack
+    mov [eax], esp      ; save esp
+    mov esp, edx
+
+    pop edi
+    pop esi
+    pop ebx
+    pop ebp
+    ret
+
+
+; ####################### 系统调用 #######################
+; int 0x80
+[global _syscall]
+_syscall:
+    cli
+    push 0
+    push 0x80
+    jmp _isr_stub
+
+; defines
+sys_fork    EQU 1
+sys_exit    EQU 2
+sys_exec    EQU 3
+sys_sleep   EQU 4
+
+; syscall macro
+%macro syscall 1
+[global %1]
+%1:
+    mov eax, sys%1
+    int 0x80
+    ret
+%endmacro
+
+syscall _fork
+syscall _exit
+syscall _exec
+syscall _sleep

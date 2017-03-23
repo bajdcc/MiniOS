@@ -6,6 +6,7 @@
 #include <asm.h>
 #include <vga.h>
 #include <print.h>
+#include <proc.h>
 
 void print_status() {
     uint16_t reg1, reg2, reg3, reg4;
@@ -29,6 +30,11 @@ void panic(const char *msg) {
     vga_setcolor(VGA_COLOR_RED, VGA_COLOR_BLACK);
 
     printk("***** KERNEL PANIC *****\n");
+
+    if (proc) {
+        printk("Current proc: `%s`(PID: %d)\n", proc->name, proc->pid);
+    }
+
     printk("Message: %s\n", msg);
     printk("\n");
     printk("Status:\n");

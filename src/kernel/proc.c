@@ -31,7 +31,12 @@ int using_procs = 0;
 
 // 分叉返回
 void fork_ret() {
-
+    /*
+            # BUG #
+        当fork_ret返回时，执行_isr_stub_ret，然后中断返回
+        这时proc->fi中断现场被恢复，导致eip回到0xc0000000处（即init.asm）
+        然而此时运行到int 0x80时并不会进入中断
+    */
 }
 
 // 进程切换
@@ -129,15 +134,15 @@ void proc_init() {
     // 将内核数据拷贝至映射用户空间
     uvm_init(pp->pgdir, &__init_start, size);
 
-    // 拷贝中断现场
-    pp->fi->cs = (SEL_UCODE << 3) | 0x3;
+    // 拷贝中断现场，在执行完_isr_stub_ret恢复
+    pp->fi->cs = (SEL_UCODE << 3) | 0x3; // 0x3 RPL=3
     pp->fi->ds = (SEL_UDATA << 3) | 0x3;
     pp->fi->es = pp->fi->ds;
     pp->fi->fs = pp->fi->ds;
     pp->fi->gs = pp->fi->ds;
     pp->fi->ss = pp->fi->ds;
     pp->fi->eflags = 0x200;
-    pp->fi->user_esp = USER_BASE + PAGE_SIZE; // 用户空间在内核空间之后
+    pp->fi->user_esp = USER_BASE + PAGE_SIZE; // 堆栈顶部，因为是向下生长的
     pp->fi->eip = USER_BASE; // 返回地址为用户基址
 
     strcpy(pp->name, "init"); // 第一个进程名为init
@@ -150,7 +155,7 @@ void schedule() {
     struct proc *pp;
 
     for (;;) {
-
+        
         // 查找可用进程
         for (pp = &pcblist[0]; pp < &pcblist[NPROC]; pp++) {
 
@@ -160,6 +165,7 @@ void schedule() {
             if (pp->state == P_RUNABLE) { // 进程是活动的
 
                 uvm_switch(pp);
+
                 pp->state = P_RUNNING;
 
                 proc = pp;

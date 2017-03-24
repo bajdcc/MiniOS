@@ -14,7 +14,7 @@ void uvm_init(pde_t *pgdir, char *init, uint32_t size);
 // 申请用户空间
 int uvm_alloc(pte_t *pgdir, uint32_t old_sz, uint32_t new_sz);
 
-// 切换至内核态
+// 用户页表切换
 void uvm_switch(struct proc *pp);
 
 // 释放用户空间

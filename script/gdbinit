@@ -4,4 +4,6 @@ symbol-file bin/kernel.elf
 b sched
 b context_switch
 b fork
+b proc_init
+b uvm_switch
 c

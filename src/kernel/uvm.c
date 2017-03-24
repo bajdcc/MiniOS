@@ -22,9 +22,10 @@ void uvm_init(pde_t *pgdir, char *init, uint32_t size) {
     vmm_map(pgdir, USER_BASE, (uint32_t)room, PTE_U | PTE_P | PTE_R); // 用户空间基址存放初值
 }
 
-// 切换至内核态
+// 页表切换
 void uvm_switch(struct proc *pp) {
-    tss_set(SEL_KDATA << 3, (uint32_t)pp->stack + PAGE_SIZE); // 内核态
+    // 注：据Linux内核的实现，tss不参与进程切换，故原代码删除
+    // 切换到进程页表
     vmm_switch((uint32_t)pp->pgdir);
 }
 

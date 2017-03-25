@@ -18,4 +18,14 @@ void irq_uninstall(uint8_t irq);
 // 初始化中断服务
 void irq_init();
 
+// 允许中断
+void irq_enable(uint8_t irq);
+// 屏蔽中断
+void irq_disable(uint8_t irq);
+
+// ---------------------------
+
+// 初始化时钟
+void irq_init_timer(void (*handler)(struct interrupt_frame *r));
+
 #endif

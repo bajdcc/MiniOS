@@ -1,9 +1,4 @@
 target remote localhost:1234
 symbol-file bin/kernel.elf
 #b os_main
-b sched
-b context_switch
-b fork
-b proc_init
-b uvm_switch
 c

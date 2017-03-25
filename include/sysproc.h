@@ -1,6 +1,8 @@
 #ifndef __SYSPROC_H
 #define __SYSPROC_H
 
+void irq_handler_clock(struct interrupt_frame *r);
+
 extern int _fork();
 extern int _exit();
 extern int _exec();

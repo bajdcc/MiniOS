@@ -7,6 +7,7 @@
 #include <asm.h>
 #include <idt.h>
 #include <isr.h>
+#include <irq.h>
 
 /* These are own ISRs that point to our special IRQ handler
 *  instead of the regular 'fault_handler' function */
@@ -39,12 +40,15 @@ void *irq_routines[ISR_NIRQ] = {
 /* This installs a custom IRQ handler for the given IRQ */
 // 设置IRQ
 void irq_install(uint8_t irq, void (*handler)(struct interrupt_frame *r)) {
+    irq_disable(irq);
     irq_routines[irq] = handler;
+    irq_enable(irq);
 }
 
 /* This clears the handler for a given IRQ */
 // 清空IRQ
 void irq_uninstall(uint8_t irq) {
+    irq_disable(irq);
     irq_routines[irq] = 0;
 }
 
@@ -90,8 +94,8 @@ void irq_remap() {
     outb(PIC1_DATA, ICW4_8086);
     outb(PIC2_DATA, ICW4_8086);
  
-    outb(PIC1_DATA, 0x0);                     // clear irq maske, enable all irq in Mister PIC
-    outb(PIC2_DATA, 0x0);                     // clear irq maske, enable all irq in Slave PIC
+    outb(PIC1_DATA, 0x0);                    // disable all irq in Mister PIC
+    outb(PIC2_DATA, 0x0);                    // disable all irq in Slave PIC
 }
 
 /* We first remap the interrupt controllers, and then we install
@@ -138,4 +142,40 @@ void irq_handler(struct interrupt_frame *r) {
     /* In either case, we need to send an EOI to the master
     *  interrupt controller too */
     outb(PIC1_CMD, PIC_EOI);
+}
+
+// 允许中断
+void irq_enable(uint8_t irq) {
+    if(irq < 8) {
+        outb(PIC1_DATA, inb(PIC1_DATA) & ~(1 << irq));
+    } else {
+        outb(PIC2_DATA, inb(PIC2_DATA) & ~(1 << irq));
+    }
+}
+
+// 屏蔽中断
+void irq_disable(uint8_t irq) {
+    if(irq < 8) {
+        outb(PIC1_DATA, inb(PIC1_DATA) | (1 << irq));
+    } else {
+        outb(PIC2_DATA, inb(PIC2_DATA) | (1 << irq));
+    }
+}
+
+// 时钟中断 初始化 8253 PIT
+
+/* 8253/8254 PIT (Programmable Interval Timer) */
+#define TIMER0         0x40 /* I/O port for timer channel 0 */
+#define TIMER_MODE     0x43 /* I/O port for timer mode control */
+#define RATE_GENERATOR 0x34 /* 00-11-010-0 :
+                            * Counter0 - LSB then MSB - rate generator - binary
+                            */
+#define TIMER_FREQ     1193182L /* clock frequency for timer in PC and AT */
+#define HZ             100  /* clock freq (software settable on IBM-PC) */
+
+void irq_init_timer(void (*handler)(struct interrupt_frame *r)) {
+    outb(TIMER_MODE, RATE_GENERATOR);
+    outb(TIMER0, (uint8_t) (TIMER_FREQ/HZ) );
+    outb(TIMER0, (uint8_t) ((TIMER_FREQ/HZ) >> 8));
+    irq_install(IRQ_TIMER, handler);
 }

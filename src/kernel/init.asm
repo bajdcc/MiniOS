@@ -16,10 +16,13 @@ __init_start:
 loop:
     mov eax, 4 ; sleep
     int 0x80 ; syscall
+    nop
     jmp loop
 
 child:
     mov eax, 3 ; exec
+    int 0x80 ; syscall
+    mov eax, 2 ; exit
     int 0x80 ; syscall
     jmp $
 

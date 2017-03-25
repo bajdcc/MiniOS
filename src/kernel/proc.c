@@ -26,17 +26,9 @@ struct context *cpu_context;
 // 当前进程
 struct proc *proc = NULL;
 
-// 活动的进程数量
-int using_procs = 0;
-
 // 分叉返回
 void fork_ret() {
-    /*
-            # BUG #
-        当fork_ret返回时，执行_isr_stub_ret，然后中断返回
-        这时proc->fi中断现场被恢复，导致eip回到0xc0000000处（即init.asm）
-        然而此时运行到int 0x80时并不会进入中断
-    */
+
 }
 
 // 进程切换
@@ -93,6 +85,12 @@ static struct proc *proc_alloc() {
             // 当前指令执行地址为fork_ret
             pp->context->eip = (uint32_t)fork_ret;
 
+            // 初始化优先级
+            pp->priority = PRIOR_USER;
+
+            // 重置时间片
+            pp->ticks = 0;
+
             return pp;
         }
     }
@@ -104,8 +102,6 @@ void proc_init() {
     struct proc *pp;
     extern char __init_start;
     extern char __init_end;
-
-    using_procs++;
 
     // PID计数清零
     cur_pid = 0;
@@ -148,32 +144,69 @@ void proc_init() {
     strcpy(pp->name, "init"); // 第一个进程名为init
 
     pp->state = P_RUNABLE; // 状态设置为可运行
+
+    pp->priority = PRIOR_KERN; // 初始化优先级
+
+    tss_set(SEL_KDATA << 3, (uint32_t)pp->stack + PAGE_SIZE); // 初始化内核任务状态段
+
+    proc = pp;
+}
+
+// 进程切换
+static void proc_switch(struct proc *pp) {
+    pp->state = P_RUNNING;
+    proc = pp; // 切换当前活动进程
+
+    // 切换，将pp->context保存至cpu_context
+    // 现场保存至cpu_context
+    context_switch(&cpu_context, pp->context);
+}
+
+// 挑选可用进程
+static struct proc *proc_pick() {
+    struct proc *pp, *pp_ready;
+    int greatest_ticks = 0;
+
+    // 查找可用进程
+    for (pp = &pcblist[0]; pp < &pcblist[NPROC]; pp++) {
+
+        if (pp->state == P_RUNABLE) { // 进程是活动的
+
+            if (pp->ticks > greatest_ticks) {
+                greatest_ticks = pp->ticks;
+                pp_ready = pp;
+            }
+        }
+    }
+
+    if (!greatest_ticks)
+        return 0;
+    return pp_ready;
 }
 
 // 进程调度
 void schedule() {
-    struct proc *pp;
+    struct proc *pp, *pp_ready;
+    pp_ready = 0;
 
-    for (;;) {
+    while (!pp_ready) {
         
-        // 查找可用进程
-        for (pp = &pcblist[0]; pp < &pcblist[NPROC]; pp++) {
+        pp_ready = proc_pick(); // 挑选进程
+
+        if (!pp_ready) { // 所有进程时间片用完，重置
+            for (pp = &pcblist[0]; pp < &pcblist[NPROC]; pp++) {
+                if (pp->state == P_RUNABLE) {
+                    pp->ticks = pp->priority;
+                }
+            }
+        } else {
+            pp = pp_ready;
 
             // 关中断
             cli();
 
-            if (pp->state == P_RUNABLE) { // 进程是活动的
-
-                uvm_switch(pp);
-
-                pp->state = P_RUNNING;
-
-                proc = pp;
-
-                // 切换，将pp->context保存至cpu_context
-                // 现场保存至cpu_context
-                context_switch(&cpu_context, pp->context);
-            }
+            uvm_switch(pp);
+            proc_switch(pp);
 
             // 开中断
             sti();
@@ -257,6 +290,18 @@ int wait() {
     }
 }
 
+// 进程销毁
+static void proc_destroy(struct proc *pp) {
+    pmm_free((uint32_t)pp->stack); // 释放堆栈内存
+    pp->stack = 0;
+    uvm_free(pp->pgdir); // 释放页表
+
+    pp->state = P_UNUSED;
+    pp->pid = 0;
+    pp->parent = 0;
+    pp->name[0] = 0;
+}
+
 // 等待所有进程
 void wait_all() {
     struct proc *pp;
@@ -267,18 +312,12 @@ void wait_all() {
             
             if (pp->state == P_ZOMBIE) {
 
-                using_procs--;
+                cli();
 
                 uvm_switch(pp);
+                proc_destroy(pp);
 
-                pmm_free((uint32_t)pp->stack); // 释放堆栈内存
-                pp->stack = 0;
-                uvm_free(pp->pgdir); // 释放页表
-
-                pp->state = P_UNUSED;
-                pp->pid = 0;
-                pp->parent = 0;
-                pp->name[0] = 0;
+                sti();
 
             } else if (pp->state != P_UNUSED) {
 
@@ -340,6 +379,12 @@ int fork() {
     // 将当前进程的用户空间拷贝至子进程
     child->pgdir = uvm_copy(proc->pgdir, proc->size);
 
+    // 映射堆栈
+    /* 这句的缺少才是导致bug的罪魁祸首
+     * 具体原因是：未映射内存导致无法访问，进而导致系统reset
+     */
+    vmm_map(child->pgdir, (uint32_t)child->stack, (uint32_t)child->stack, PTE_P | PTE_R | PTE_U);
+
     if (child->pgdir == 0) { // 拷贝失败
         panic("fork:");
         pmm_free((uint32_t)child->stack);
@@ -359,4 +404,17 @@ int fork() {
     child->state = P_RUNABLE; // 置状态为可运行
     
     return child->pid; // 返回子进程PID
+}
+
+void irq_handler_clock(struct interrupt_frame *r) {
+    
+    if (!proc)
+        return;
+
+    if (proc->ticks > 0) {
+        proc->ticks--;
+        return;
+    }
+    
+    schedule();
 }

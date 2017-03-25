@@ -7,9 +7,11 @@
 #include <gdt.h>
 #include <idt.h>
 #include <isr.h>
+#include <irq.h>
 #include <pmm.h>
 #include <vmm.h>
 #include <syscall.h>
+#include <sysproc.h>
 #include <proc.h>
 
 void print_ok(void)
@@ -69,12 +71,11 @@ int os_main(void)
     puts("Hello world!  --- OS by bajdcc \n");
     puts("\n");
 
-    // 开始进程调度
-    schedule();
+    irq_init_timer(irq_handler_clock);
 
-LOOP:
-    hlt();
-    goto LOOP;
+    sti();
+
+    while (1); // handle interrupt
 
     return 0;
 }

@@ -1,3 +1,4 @@
+#include <asm.h>
 #include <print.h>
 #include <proc.h>
 #include <sysproc.h>
@@ -12,7 +13,7 @@ int sys_exit() {
 }
 
 int sys_exec() {
-    printk("aaa\n");
+    printk("exec\n");
     return 0;
 }
 

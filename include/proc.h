@@ -18,6 +18,9 @@
 #define P_SLEEPING  0x4 // 休眠中
 #define P_ZOMBIE    0x5 // 死亡
 
+#define PRIOR_KERN  0x10 // init进程优先级
+#define PRIOR_USER  0x20 // 用户进程优先级
+
 // 进程切换上下文，保存关键寄存器内容
 struct context {
     uint32_t edi;
@@ -39,6 +42,8 @@ struct proc {
     pde_t *pgdir;                   // 虚页目录（一级页表）
     char *stack;                    // 进程内核堆栈
     struct proc *parent;            // 父进程
+    int8_t ticks;                   // 时间片
+    int8_t priority;                // 优先级
 };
 
 // 当前运行的进程

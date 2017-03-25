@@ -24,7 +24,14 @@ void uvm_init(pde_t *pgdir, char *init, uint32_t size) {
 
 // 页表切换
 void uvm_switch(struct proc *pp) {
-    // 注：据Linux内核的实现，tss不参与进程切换，故原代码删除
+    /* 注：据Linux内核的实现，tss不参与进程切换
+     * 然而tss的作用是特权级切换时，恢复ss0和esp0
+     * 由于先前删除了这一句，故用户态int 0x80时直接跳转至
+     * 0x00000000地址处，即BIOS代码处，导致bug
+     * 
+     * 已查明BUG原因：下下一句页表设置有缺陷，即没有映射堆栈pp->stack
+     * 已将TSS初始化语句放置在proc_init中
+     */
     // 切换到进程页表
     vmm_switch((uint32_t)pp->pgdir);
 }

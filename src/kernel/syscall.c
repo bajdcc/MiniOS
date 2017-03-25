@@ -150,11 +150,11 @@ void syscall() {
 
     cn = proc->fi->eax; // eax表示调用号
 
+    printk("syscall: %d, pid: %d\n", cn, proc->pid);
+
     if (cn > 0 && cn <= NSYSCALL && sys_routines[cn]) {
         proc->fi->eax = sys_routines[cn]();
     } else {
         proc->fi->eax = -1;
     }
-
-    sti();
 }

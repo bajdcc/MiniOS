@@ -135,7 +135,7 @@ void fault_handler(struct interrupt_frame *r) {
     /* fault happen in kernel(ring0) */
     if ((r->cs & 0x3) == CPL_KERN) {
         if (r->int_no < 32) {
-            printk("System fault! Error code: %d\n", r->err_code);
+            printk("System fault!\n");
             panic(fault_msg[r->int_no]);
         } else {
             panic("Unknown Interrupt, System Halted!\n");

@@ -11,8 +11,9 @@
 #include <print.h>
 #include <proc.h>
 
-extern void _isr_stub_ret();
-extern void _context_switch(struct context **old, struct context *new);
+
+// 中断重入计数
+int32_t k_reenter;
 
 // 进程ID（每次递增，用于赋值给新进程）
 static uint32_t cur_pid = 0;
@@ -31,11 +32,6 @@ void fork_ret() {
 
 }
 
-// 进程切换
-void context_switch(struct context **old, struct context* new) {
-    _context_switch(old, new);
-}
-
 // 开辟新进程
 static struct proc *proc_alloc() {
     struct proc *pp;
@@ -49,7 +45,6 @@ static struct proc *proc_alloc() {
             /*
                 ------------------------------ 4KB
                 interrupt_frame
-                _isr_stub_ret
                 context
                 ...
                 stack
@@ -70,16 +65,10 @@ static struct proc *proc_alloc() {
             // 进程的中断现场fi 位置 = page_head + 页大小 - 中断现场结构大小
             pp->fi = (struct interrupt_frame *)p;
 
-            // p = page_head + 页大小 - 中断现场结构大小 - 4
-            p -= 4;
-
-            // 中断返回地址 = fi - 4
-            *(uint32_t *)p = (uint32_t)_isr_stub_ret;
-
-            // p = page_head + 页大小 - 中断现场结构大小 - 4 - 上下文大小
+            // p = page_head + 页大小 - 中断现场结构大小 - 上下文大小
             p -= sizeof(*pp->context);
 
-            // 上下文地址 = page_head + 页大小 - 中断现场结构大小 - 4 - 上下文大小
+            // 上下文地址 = page_head + 页大小 - 中断现场结构大小 - 上下文大小
             pp->context = (struct context *)p;
             
             // 当前指令执行地址为fork_ret
@@ -102,6 +91,9 @@ void proc_init() {
     struct proc *pp;
     extern char __init_start;
     extern char __init_end;
+
+    // 重入计数
+    k_reenter = 0;
 
     // PID计数清零
     cur_pid = 0;
@@ -137,17 +129,15 @@ void proc_init() {
     pp->fi->fs = pp->fi->ds;
     pp->fi->gs = pp->fi->ds;
     pp->fi->ss = pp->fi->ds;
-    pp->fi->eflags = 0x200;
+    pp->fi->eflags = 0x202;
     pp->fi->user_esp = USER_BASE + PAGE_SIZE; // 堆栈顶部，因为是向下生长的
-    pp->fi->eip = USER_BASE; // 返回地址为用户基址
+    pp->fi->eip = USER_BASE; // 从0xc0000000开始执行
 
     strcpy(pp->name, "init"); // 第一个进程名为init
 
     pp->state = P_RUNABLE; // 状态设置为可运行
 
     pp->priority = PRIOR_KERN; // 初始化优先级
-
-    tss_set(SEL_KDATA << 3, (uint32_t)pp->stack + PAGE_SIZE); // 初始化内核任务状态段
 
     proc = pp;
 }
@@ -156,10 +146,6 @@ void proc_init() {
 static void proc_switch(struct proc *pp) {
     pp->state = P_RUNNING;
     proc = pp; // 切换当前活动进程
-
-    // 切换，将pp->context保存至cpu_context
-    // 现场保存至cpu_context
-    context_switch(&cpu_context, pp->context);
 }
 
 // 挑选可用进程
@@ -220,10 +206,6 @@ void sched() {
     if (proc->state == P_RUNNING) {
         proc->state = P_RUNABLE;
     }
-
-    // 切换返回，从cpu_context中恢复至proc->context
-    // 从cpu_context中恢复现场
-    context_switch(&proc->context, cpu_context);
 }
 
 // 进程休眠
@@ -407,12 +389,16 @@ int fork() {
 }
 
 void irq_handler_clock(struct interrupt_frame *r) {
-    
+
     if (!proc)
         return;
 
     if (proc->ticks > 0) {
         proc->ticks--;
+        return;
+    }
+
+    if (k_reenter != 0) {
         return;
     }
     

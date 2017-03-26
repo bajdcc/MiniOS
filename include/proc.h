@@ -33,12 +33,12 @@ struct context {
 // PCB process control block 进程控制块
 // http://blog.csdn.net/wyzxg/article/details/4024340
 struct proc {
+    struct interrupt_frame *fi;     // 中断现场
+    struct context *context;        // 进程上下文
     volatile uint8_t pid;           // 进程ID
     uint32_t size;                  // 用户空间大小
     uint8_t state;                  // 进程状态
     char name[PN_MAX_LEN];          // 进程名称
-    struct interrupt_frame *fi;     // 中断现场
-    struct context *context;        // 进程上下文
     pde_t *pgdir;                   // 虚页目录（一级页表）
     char *stack;                    // 进程内核堆栈
     struct proc *parent;            // 父进程
@@ -51,6 +51,9 @@ extern struct proc *proc;
 
 // 当前CPU上下文
 extern struct context *cpu_context;
+
+// 记录中断重入次数
+extern int32_t k_reenter;
 
 // 初始化进程管理
 void proc_init();

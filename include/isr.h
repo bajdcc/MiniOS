@@ -32,10 +32,10 @@ struct interrupt_frame {
     uint32_t ecx;
     uint32_t eax;
 
+    uint32_t ret_addr; // 返回地址
     uint32_t int_no;
 
     /* save by `int` instruction */
-    uint32_t err_code;
     uint32_t eip;
     uint32_t cs;    // 16 bits
     uint32_t eflags;

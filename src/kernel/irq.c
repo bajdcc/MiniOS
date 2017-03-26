@@ -94,8 +94,8 @@ void irq_remap() {
     outb(PIC1_DATA, ICW4_8086);
     outb(PIC2_DATA, ICW4_8086);
  
-    outb(PIC1_DATA, 0x0);                    // disable all irq in Mister PIC
-    outb(PIC2_DATA, 0x0);                    // disable all irq in Slave PIC
+    outb(PIC1_DATA, 0xFF);                    // disable all irq in Mister PIC
+    outb(PIC2_DATA, 0xFF);                    // disable all irq in Slave PIC
 }
 
 /* We first remap the interrupt controllers, and then we install

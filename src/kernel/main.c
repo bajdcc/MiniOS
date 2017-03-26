@@ -14,6 +14,8 @@
 #include <sysproc.h>
 #include <proc.h>
 
+extern void restart();
+
 void print_ok(void)
 {
     putchar('[');
@@ -73,7 +75,7 @@ int os_main(void)
 
     irq_init_timer(irq_handler_clock);
 
-    sti();
+    restart(); // 完成中断的后半部分，从而进入init进程
 
     while (1); // handle interrupt
 

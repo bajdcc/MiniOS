@@ -113,4 +113,7 @@ void tss_install();
 // 设置任务状态段
 void tss_set(uint16_t ss0, uint32_t esp0);
 
+// 设置TSS为当前进程堆栈
+extern void tss_reset();
+
 #endif

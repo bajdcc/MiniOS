@@ -17,6 +17,9 @@ align 4
 [section .text]
 
 [extern os_main]
+[extern tss_reset]
+[extern isr_stub]
+[extern k_reenter]
 [global start]
 start:
     xor eax, eax
@@ -44,8 +47,8 @@ start:
     jmp dword SEL_KERN_CODE:go
 
 go:
-    mov	edi, (160*3)+0   ; 160*50 line 3 column 1
-    mov	ah, 00001100b    ; red color
+    mov edi, (160*3)+0   ; 160*50 line 3 column 1
+    mov ah, 00001100b    ; red color
 
     mov esi, msg 
     call print
@@ -112,6 +115,7 @@ fault%1:
     %if %1 != 17 && %1 != 30 && (%1 < 8 || %1 > 14)
         push 0 ; fake error code
     %endif
+    pop eax
     push %1
     jmp _isr_stub ; 中断处理程序
 %endmacro 
@@ -123,18 +127,48 @@ fault%1:
 %endrep
 
 ; ***** 32-47号中断 Interrupt Request int 32 - 47
+; int 0-7
 %macro m_irq 1
 [global irq%1]
 irq%1:
-    cli
-    push 0
     push %1+32
-    jmp _isr_stub
+    call save
+    in  al, 0x21            ; `.
+    or  al, (1 << %1)       ;  | 屏蔽当前中断
+    out 0x21, al            ; /
+    mov al, 0x20            ; `. 置EOI位
+    out 0x20, al            ; /
+    push %1+32
+    mov eax, esi
+    push eax
+    mov eax, isr_stub
+    sti
+    call eax ; 中断处理
+    cli
+    pop ecx
+    in  al, 0x21            ; `.
+    and al, ~(1 << %1)      ;  | 恢复接受当前中断
+    out 0x21, al            ; /
+    add esp, 4
+    ret
+%endmacro
+
+; int 8-15
+%macro m_irq2 1
+[global irq%1]
+irq%1:
+    cli
+    push %1+32
+    jmp _isr_stub ; 中断处理程序
 %endmacro
 
 %assign i 0
-%rep 16 
-    m_irq i   
+%rep 8
+    m_irq i
+%assign i i+1
+%endrep
+%rep 8
+    m_irq2 i
 %assign i i+1
 %endrep
 
@@ -144,20 +178,19 @@ irq%1:
 [global isr_unknown]
 isr_unknown:
     cli
-    push 0
     push 255
-    jmp _isr_stub
+    jmp _isr_stub ; 中断处理程序
 
 
 ; ####################### 中断服务例程 #######################
 
-; kernel/isr.c 
-[global _isr_stub_ret]
 [extern isr_stub]
 ; a common ISR func, sava the context of CPU 
 ; call C func to process fault
 ; at last restore stack frame
 _isr_stub:
+    push eax
+
     ; 保存现场
     pusha
     push ds
@@ -189,42 +222,62 @@ _isr_stub_ret:
     add esp, 8
     iret
 
+save:
+    pushad          ; `.
+    push    ds      ;  |
+    push    es      ;  | 保存原寄存器值
+    push    fs      ;  |
+    push    gs      ; /
+    mov     dx, ss
+    mov     ds, dx
+    mov     es, dx
 
-; ####################### 进程切换 #######################
-; kernel/proc.c
-; void _context_switch(struct context **old, struct context* new);
-; http://wiki.osdev.org/Context_Switching
+    mov     esi, esp                    ; esi = 进程表起始地址
+    
+    inc     dword [k_reenter]           ; k_reenter++;
+    cmp     dword [k_reenter], 0        ; if (k_reenter == 0)
+    jne     .1                          ; {
+    mov     ax, SEL_KERN_DATA           ; 内核数据段
+    mov     ds, ax
+    mov     es, ax
+    mov     fs, ax
+    mov     gs, ax
+    mov     ss, ax
+    push    restart                     ;     push restart
+    jmp     [esi + 48]                  ;     return;
+.1:                                     ; } else { 已经在内核栈，不需要再切换
+    push    restart_reenter             ;     push restart_reenter
+    jmp     [esi + 48]                  ;     return;
+                                        ; }
 
-[global _context_switch]
-_context_switch:
-    mov eax, [esp + 4]  ; old
-    mov edx, [esp + 8]  ; new
-
-    ; eip has been save when call _context_switch
-    push ebp
-    push ebx
-    push esi
-    push edi
-
-    ; switch stack
-    mov [eax], esp      ; save esp
-    mov esp, edx
-
-    pop edi
-    pop esi
-    pop ebx
-    pop ebp
-    ret
-
+[extern proc]
+[global restart]
+restart:
+    call tss_reset
+    mov eax, [proc]
+    mov esp, [eax]  ; esp = proc->fi
+restart_reenter:
+    dec dword [k_reenter]
+    pop gs
+    pop fs
+    pop es
+    pop ds
+    popad
+    add esp, 8
+    iretd
 
 ; ####################### 系统调用 #######################
 ; int 0x80
 [global _syscall]
 _syscall:
-    cli
-    push 0
     push 0x80
-    jmp _isr_stub
+    call save
+    sti
+    mov eax, isr_stub
+    call eax ; 中断处理
+    mov [esi + 44], eax
+    cli
+    ret
 
 ; defines
 sys_fork    EQU 1

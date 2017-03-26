@@ -7,6 +7,8 @@
 #include <string.h>
 #include <print.h>
 #include <idt.h>
+#include <proc.h>
+#include <uvm.h>
 
 static struct idt_entry idt[NIDT];
 struct tss_entry tss;
@@ -50,4 +52,9 @@ void tss_set(uint16_t ss0, uint32_t esp0) {
     tss.ss0 = ss0;
     tss.esp0 = esp0;
     tss.iopb_off = sizeof(tss);
+}
+
+// 重置当前进程的TSS
+void tss_reset() {
+    tss_set(SEL_KDATA << 3, (uint32_t)proc->stack + PAGE_SIZE);
 }

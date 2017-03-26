@@ -257,6 +257,9 @@ restart:
     mov eax, [proc]
     mov esp, [eax]  ; esp = proc->fi
 restart_reenter:
+    ;mov eax, [esp + 4]
+    ;cmp eax,0x35
+    ;ja pp
     dec dword [k_reenter]
     pop gs
     pop fs
@@ -283,3 +286,6 @@ _syscall:
     push eax ; 恢复刚刚pop的中断返回地址
     cli
     ret
+
+pp:
+jmp $

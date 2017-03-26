@@ -148,7 +148,14 @@ void sys_init() {
 void syscall() {
     int cn;
 
+    if (!proc || proc->state == P_SLEEPING) {
+        proc->fi->eax = -1;
+        return;
+    }
+
     cn = proc->fi->eax; // eax表示调用号
+    
+    printk("proc#%d: %s\n", proc->pid, sys_name[cn]);
 
     if (cn > 0 && cn <= NSYSCALL && sys_routines[cn]) {
         proc->fi->eax = sys_routines[cn]();

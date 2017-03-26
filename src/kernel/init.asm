@@ -8,18 +8,16 @@ align 4
 
 __init_start:
     nop
+.fork:
     mov eax, 1 ; fork
     int 0x80 ; syscall
     cmp eax, 0
     jz child
-
-loop:
+    call delay
     mov eax, 5 ; wait
     int 0x80 ; syscall
-    nop
-    nop
-    jmp loop
-    jmp $
+    call delay
+    loop .fork
 
 child:
     mov eax, 3 ; exec
@@ -27,5 +25,12 @@ child:
     mov eax, 2 ; exit
     int 0x80 ; syscall
     jmp $
+
+delay:
+    push ecx
+    mov ecx, 0x100000
+    loop $
+    pop ecx
+    ret
 
 __init_end:

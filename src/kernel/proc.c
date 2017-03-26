@@ -126,7 +126,9 @@ void proc_init() {
 
 // 进程切换
 static void proc_switch(struct proc *pp) {
-    proc->state = P_RUNABLE;
+    if (proc->state == P_RUNNING) {
+        proc->state = P_RUNABLE;
+    }
     pp->state = P_RUNNING;
     proc = pp; // 切换当前活动进程
 }
@@ -203,8 +205,6 @@ void sleep() {
 void wakeup(uint8_t pid) {
     struct proc* pp;
 
-    printk("a");
-
     cli();
 
     for (pp = pcblist; pp <= &pcblist[NPROC]; pp++) {
@@ -218,6 +218,7 @@ void wakeup(uint8_t pid) {
 
 // 进程销毁
 static void proc_destroy(struct proc *pp) {
+    printk("destroy: pid=%d\n", pp->pid);
     pmm_free((uint32_t)pp->stack); // 释放堆栈内存
     pp->stack = 0;
     uvm_free(pp->pgdir); // 释放页表
@@ -249,15 +250,18 @@ int wait() {
             pid = pp->pid;
             proc_destroy(pp);
 
+            sti();
+
             return pid; // 返回刚刚退出的子进程ID
         }
     }
 
     if (!has_child || proc->state == P_ZOMBIE) {
+        sti();
         return -1; // 无需等待一个将被杀死的进程
     }
 
-    sleep(proc->pid); // 等待，这里不能阻塞，因为要防止中断重入
+    sleep(); // 等待，这里不能阻塞，因为要防止中断重入
 
     sti();
 
@@ -270,7 +274,10 @@ void exit() {
 
     cli();
 
-    if (!proc->parent) return; // init
+    if (!proc->parent) { // init
+        sti();
+        return;
+    }
     
     for (pp = pcblist; pp < &proc[NPROC]; pp++) {
         if (pp->parent == proc) { // 找到子进程
@@ -297,6 +304,7 @@ int kill(uint8_t pid) {
 
         if (pp->pid == pid) { // 找到要杀死的进程
             pp->state = P_ZOMBIE; // 标记为僵尸进程
+            sti();
             return 0;
         }
     }
@@ -313,6 +321,7 @@ int fork() {
     cli();
 
     if ((child = proc_alloc()) == 0) {
+        sti();
         return -1; // 创建进程失败
     }
 
@@ -330,6 +339,7 @@ int fork() {
         pmm_free((uint32_t)child->stack);
         child->stack = 0;
         child->state = P_UNUSED;
+        sti();
         return -1; // 创建进程失败
     }
 
@@ -357,7 +367,6 @@ void irq_handler_clock(struct interrupt_frame *r) {
         proc->ticks--;
         return;
     }
-
 
     if (k_reenter != 0) {
         return;

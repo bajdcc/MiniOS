@@ -74,6 +74,8 @@ int os_main(void)
     puts("Hello world!  --- OS by bajdcc \n");
     puts("\n");
 
+    vga_setcolor(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
+
     irq_init_timer(irq_handler_clock);
 
     uvm_switch(proc);

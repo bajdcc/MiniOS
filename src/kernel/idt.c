@@ -9,6 +9,7 @@
 #include <idt.h>
 #include <proc.h>
 #include <uvm.h>
+#include <vmm.h>
 
 static struct idt_entry idt[NIDT];
 struct tss_entry tss;

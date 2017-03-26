@@ -10,6 +10,7 @@
 #include <irq.h>
 #include <pmm.h>
 #include <vmm.h>
+#include <uvm.h>
 #include <syscall.h>
 #include <sysproc.h>
 #include <proc.h>
@@ -75,6 +76,7 @@ int os_main(void)
 
     irq_init_timer(irq_handler_clock);
 
+    uvm_switch(proc);
     restart(); // 完成中断的后半部分，从而进入init进程
 
     while (1); // handle interrupt

@@ -153,6 +153,15 @@ static struct proc *proc_pick() {
     return pp_ready;
 }
 
+static void reset_time() {
+    struct proc *pp;
+    for (pp = &pcblist[0]; pp < &pcblist[NPROC]; pp++) {
+        if (pp->state == P_RUNABLE) {
+            pp->ticks = pp->priority;
+        }
+    }
+}
+
 // 进程调度
 void schedule() {
     struct proc *pp, *pp_ready;
@@ -163,11 +172,7 @@ void schedule() {
         pp_ready = proc_pick(); // 挑选进程
 
         if (!pp_ready) { // 所有进程时间片用完，重置
-            for (pp = &pcblist[0]; pp < &pcblist[NPROC]; pp++) {
-                if (pp->state == P_RUNABLE) {
-                    pp->ticks = pp->priority;
-                }
-            }
+            reset_time();
         } else {
             pp = pp_ready;
 

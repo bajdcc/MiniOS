@@ -21,20 +21,10 @@
 #define PRIOR_KERN  0x10 // init进程优先级
 #define PRIOR_USER  0x20 // 用户进程优先级
 
-// 进程切换上下文，保存关键寄存器内容
-struct context {
-    uint32_t edi;
-    uint32_t esi;
-    uint32_t ebx;
-    uint32_t ebp;
-    uint32_t eip;
-};
-
 // PCB process control block 进程控制块
 // http://blog.csdn.net/wyzxg/article/details/4024340
 struct proc {
     struct interrupt_frame *fi;     // 中断现场
-    struct context *context;        // 进程上下文
     volatile uint8_t pid;           // 进程ID
     uint32_t size;                  // 用户空间大小
     uint8_t state;                  // 进程状态
@@ -49,9 +39,6 @@ struct proc {
 // 当前运行的进程
 extern struct proc *proc;
 
-// 当前CPU上下文
-extern struct context *cpu_context;
-
 // 记录中断重入次数
 extern int32_t k_reenter;
 
@@ -61,20 +48,14 @@ void proc_init();
 // 进程调度循环
 void schedule();
 
-// 进程切换结束
-void sched();
-
 // 进程分叉
 int fork();
 
 // 等待子进程
 int wait();
 
-// 等待所有进程
-void wait_all();
-
 // 进程休眠
-void sleep(uint8_t pid);
+void sleep();
 
 // 进程唤醒
 void wakeup(uint8_t pid);

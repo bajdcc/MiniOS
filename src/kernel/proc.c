@@ -21,16 +21,8 @@ static uint32_t cur_pid = 0;
 // 进程PCB数组
 static struct proc pcblist[NPROC];
 
-// 当前进程的CPU上下文
-struct context *cpu_context;
-
 // 当前进程
 struct proc *proc = NULL;
-
-// 分叉返回
-void fork_ret() {
-
-}
 
 // 开辟新进程
 static struct proc *proc_alloc() {
@@ -45,7 +37,6 @@ static struct proc *proc_alloc() {
             /*
                 ------------------------------ 4KB
                 interrupt_frame
-                context
                 ...
                 stack
                 ------------------------------ 0KB
@@ -64,15 +55,6 @@ static struct proc *proc_alloc() {
 
             // 进程的中断现场fi 位置 = page_head + 页大小 - 中断现场结构大小
             pp->fi = (struct interrupt_frame *)p;
-
-            // p = page_head + 页大小 - 中断现场结构大小 - 上下文大小
-            p -= sizeof(*pp->context);
-
-            // 上下文地址 = page_head + 页大小 - 中断现场结构大小 - 上下文大小
-            pp->context = (struct context *)p;
-            
-            // 当前指令执行地址为fork_ret
-            pp->context->eip = (uint32_t)fork_ret;
 
             // 初始化优先级
             pp->priority = PRIOR_USER;
@@ -144,6 +126,7 @@ void proc_init() {
 
 // 进程切换
 static void proc_switch(struct proc *pp) {
+    proc->state = P_RUNABLE;
     pp->state = P_RUNNING;
     proc = pp; // 切换当前活动进程
 }
@@ -200,76 +183,32 @@ void schedule() {
     }
 }
 
-// 进程切换结束
-void sched() {
-
-    if (proc->state == P_RUNNING) {
-        proc->state = P_RUNABLE;
-    }
-}
-
 // 进程休眠
-void sleep(uint8_t pid) {
-    struct proc *pp;
-
+void sleep() {
     cli();
 
-    for (pp = pcblist; pp < &pcblist[NPROC]; pp++) {
-        // 若是状态为运行且pid匹配，则休眠
-        if (pp->state == P_RUNNING && pp->pid == pid) {
-            pp->state = P_SLEEPING;
-        }
+    if (proc->state == P_RUNNING) {
+        proc->state = P_SLEEPING;
     }
 
     sti();
-
-    sched(); // 切换到其他进程
-
-    wakeup(pid); // 唤醒
 }
 
 // 唤醒进程
 void wakeup(uint8_t pid) {
-    struct proc *pp;
+    struct proc* pp;
+
+    printk("a");
 
     cli();
 
-    for (pp = pcblist; pp < &pcblist[NPROC]; pp++) {
-        // 若是状态为睡眠且pid匹配，则唤醒
-        if (pp->state == P_SLEEPING && pp->pid == pid) {
+    for (pp = pcblist; pp <= &pcblist[NPROC]; pp++) {
+        if (pp->pid == pid && pp->state == P_SLEEPING) {
             pp->state = P_RUNABLE;
         }
     }
 
     sti();
-}
-
-// 等待子进程
-int wait() {
-    uint8_t has_child;
-    struct proc* pp;
-
-    for (;;) {
-        has_child = 0;
-
-        for (pp = pcblist; pp <= &pcblist[NPROC]; pp++) {
-            if (pp->parent != proc) {
-                continue; // 没有子进程
-            }
-
-            has_child = 1;
-        }
-
-        if (!has_child || proc->state == P_ZOMBIE) {
-            return -1; // 无需等待一个将被杀死的进程
-        }
-
-        if (proc->pid == pp->pid) { // 不等待自身
-            return -1;
-        }
-
-        sleep(proc->pid); // 等待
-    }
 }
 
 // 进程销毁
@@ -284,29 +223,40 @@ static void proc_destroy(struct proc *pp) {
     pp->name[0] = 0;
 }
 
-// 等待所有进程
-void wait_all() {
-    struct proc *pp;
+// 等待子进程
+int wait() {
+    uint8_t has_child, pid;
+    struct proc* pp;
 
-    for (;;) {
+    cli();
 
-        for (pp = pcblist; pp <= &pcblist[NPROC]; pp++) {
-            
-            if (pp->state == P_ZOMBIE) {
+    has_child = 0;
 
-                cli();
+    for (pp = pcblist; pp <= &pcblist[NPROC]; pp++) {
+        if (pp->parent != proc) {
+            continue; // 没有子进程
+        }
 
-                uvm_switch(pp);
-                proc_destroy(pp);
+        has_child = 1;
 
-                sti();
+        if (pp->state == P_ZOMBIE) {
 
-            } else if (pp->state != P_UNUSED) {
+            pid = pp->pid;
+            proc_destroy(pp);
 
-                sleep(proc->pid); // 休眠
-            }
+            return pid; // 返回刚刚退出的子进程ID
         }
     }
+
+    if (!has_child || proc->state == P_ZOMBIE) {
+        return -1; // 无需等待一个将被杀死的进程
+    }
+
+    sleep(proc->pid); // 等待，这里不能阻塞，因为要防止中断重入
+
+    sti();
+
+    return -1;
 }
 
 // 退出进程
@@ -314,38 +264,39 @@ void exit() {
     struct proc *pp;
 
     cli();
+
+    if (!proc->parent) return; // init
     
     for (pp = pcblist; pp < &proc[NPROC]; pp++) {
         if (pp->parent == proc) { // 找到子进程
             pp->parent = proc->parent; // 将子进程的父进程置为当前进程的父进程（当前进程skip）
-            if (pp->state == P_ZOMBIE) { // 若子进程已死亡
+            if (pp->state == P_ZOMBIE) { // 若子进程为僵尸进程
                 wakeup(proc->parent->pid); // 唤醒当前进程的父进程
             }
         }
     }
 
     wakeup(proc->parent->pid); // 唤醒当前进程的父进程
-    
-    proc->state = P_ZOMBIE; // 当前进程置为死亡状态
+    proc->state = P_ZOMBIE; // 标记为僵尸进程，等待父进程wait来销毁
 
     sti();
-
-    sched(); // 切换出当前进程
-
-    panic("exit: return form sched");
 }
 
 // 杀死进程
 int kill(uint8_t pid) {
     struct proc *pp;
 
+    cli();
+
     for (pp = pcblist; pp < &pcblist[NPROC]; pp++) {
 
         if (pp->pid == pid) { // 找到要杀死的进程
-            pp->state = P_ZOMBIE; // 标记死亡状态
+            pp->state = P_ZOMBIE; // 标记为僵尸进程
             return 0;
         }
     }
+
+    sti();
 
     return -1;
 }
@@ -353,6 +304,8 @@ int kill(uint8_t pid) {
 // 进程分叉
 int fork() {
     struct proc *child; // 子进程
+
+    cli();
 
     if ((child = proc_alloc()) == 0) {
         return -1; // 创建进程失败
@@ -384,6 +337,8 @@ int fork() {
     strncpy(child->name, proc->name, sizeof(proc->name)); // 拷贝进程名
 
     child->state = P_RUNABLE; // 置状态为可运行
+
+    sti();
     
     return child->pid; // 返回子进程PID
 }
@@ -397,6 +352,7 @@ void irq_handler_clock(struct interrupt_frame *r) {
         proc->ticks--;
         return;
     }
+
 
     if (k_reenter != 0) {
         return;

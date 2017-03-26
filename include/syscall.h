@@ -6,11 +6,14 @@
 
 #define NSYSCALL    20
 
+// 调用号是自己设置的（在以后的微内核架构中，系统调用转化为信号）
 // 调用号： mov eax #n; int 0x80
 #define SYS_FORK    1
 #define SYS_EXIT    2
 #define SYS_EXEC    3
 #define SYS_SLEEP   4
+#define SYS_WAIT    5
+#define SYS_KILL    6
 
 // 指定地址取整数
 int fetchint(uint32_t addr, int *ip);

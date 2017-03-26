@@ -273,28 +273,13 @@ _syscall:
     push 0x80
     call save
     sti
+    pop eax
+    mov [esi + 48], eax ; 保存中断返回地址
     mov eax, isr_stub
+    push esi
     call eax ; 中断处理
     mov [esi + 44], eax
+    mov eax, [esi + 48]
+    push eax ; 恢复刚刚pop的中断返回地址
     cli
     ret
-
-; defines
-sys_fork    EQU 1
-sys_exit    EQU 2
-sys_exec    EQU 3
-sys_sleep   EQU 4
-
-; syscall macro
-%macro syscall 1
-[global %1]
-%1:
-    mov eax, sys%1
-    int 0x80
-    ret
-%endmacro
-
-syscall _fork
-syscall _exit
-syscall _exec
-syscall _sleep

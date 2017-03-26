@@ -23,8 +23,8 @@ static int (*sys_routines[])(void) = {
     sys_exit,
     sys_exec,
     sys_sleep,
-    sys_none,
-    sys_none,
+    sys_wait,
+    sys_kill,
     sys_none,
     sys_none,
     sys_none,
@@ -48,8 +48,8 @@ char *sys_name[NSYSCALL + 1] = {
     "sys_exit",
     "sys_exec",
     "sys_sleep",
-    "sys_none",
-    "sys_none",
+    "sys_wait",
+    "sys_kill",
     "sys_none",
     "sys_none",
     "sys_none",
@@ -149,8 +149,6 @@ void syscall() {
     int cn;
 
     cn = proc->fi->eax; // eax表示调用号
-
-    printk("syscall: %d, pid: %d\n", cn, proc->pid);
 
     if (cn > 0 && cn <= NSYSCALL && sys_routines[cn]) {
         proc->fi->eax = sys_routines[cn]();

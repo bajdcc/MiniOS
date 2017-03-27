@@ -20,7 +20,9 @@ __init_start:
     jz child
 
     call delay
-    call sys_tasks0
+    push sys_tasks0
+    pop eax
+    call eax ; call sys_tasks0
 
     call delay
     mov eax, 5 ; wait
@@ -28,9 +30,10 @@ __init_start:
     jmp $
 
 child:
-jmp $
     call delay
-    call sys_ticks ; SYSCALL(0x80) | IPC(0x7) | SYS_TICKS(2)
+    push sys_ticks ; SYSCALL(0x80) | IPC(0x7) | SYS_TICKS(2)
+    pop eax
+    call eax ; call sys_ticks
     call delay
     push eax
     mov eax, 3 ; exec

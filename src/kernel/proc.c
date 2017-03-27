@@ -7,6 +7,7 @@
 #include <vmm.h>
 #include <uvm.h>
 #include <isr.h>
+#include <ipc.h>
 #include <string.h>
 #include <print.h>
 #include <proc.h>
@@ -67,8 +68,8 @@ static struct proc *proc_alloc() {
 
             // init ipc data
             pp->p_flags = 0;
-            pp->p_recvfrom = 0;
-            pp->p_sendto = 0;
+            pp->p_recvfrom = TASK_NONE;
+            pp->p_sendto = TASK_NONE;
             pp->has_int_msg = 0;
             pp->q_sending = 0;
             pp->next_sending = 0;
@@ -385,6 +386,28 @@ void irq_handler_clock(struct interrupt_frame *r) {
 
 struct proc *nproc(int offset) {
     return &pcblist[offset];
+}
+
+struct proc *npid(int pid) {
+    struct proc* pp;
+
+    for (pp = pcblist; pp < &proc[NPROC]; pp++) {
+        if (pp->pid == pid) {
+            return pp;
+        }
+    }
+    return 0;
+}
+
+int npoffset(int pid) {
+    int i;
+
+    for (i = 0; i < NPROC; i++) {
+        if (pcblist[i].pid == pid) {
+            return i;
+        }
+    }
+    return -1;
 }
 
 void* va2la(int pid, void* va) {

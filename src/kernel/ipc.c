@@ -21,6 +21,10 @@ extern int sendrec(int function, int src_dest, MESSAGE* msg);
  *****************************************************************************/
 int sys_sendrec(int function, int src_dest, MESSAGE* m, struct proc* p)
 {
+    if (src_dest > 0) {
+        src_dest = npoffset(src_dest);
+    }
+
     assert(k_reenter == 0);    /* make sure we are not in ring0 */
     assert((src_dest >= 0 && src_dest < NTASK + NPROC) ||
            src_dest == TASK_ANY ||
@@ -75,18 +79,7 @@ int sys_sendrec(int function, int src_dest, MESSAGE* m, struct proc* p)
  *****************************************************************************/
 int send_recv(int function, int src_dest, MESSAGE* msg)
 {
-    int ret = 0, i;
-
-    for (i = 0; i < NPROC; i++) {
-        if (src_dest == proc2pid(nproc(i))) {
-            src_dest = i;
-            break;
-        }
-    }
-
-    if (i == NPROC) {
-        assert(!"invalid src_dest");
-    }
+    int ret = 0;
 
     if (function == RECEIVE)
         memset(msg, 0, sizeof(MESSAGE));
@@ -176,16 +169,9 @@ int deadlock(int src, int dest)
     while (1) {
         if (p->p_flags & SENDING) {
             if (p->p_sendto == src) {
-                /* print the chain */
-                p = nproc(dest);
-                do {
-                    assert(p->p_msg);
-                    p = nproc(p->p_sendto);
-                } while (p != nproc(src));
-
                 return 1;
             }
-            p = nproc(p->p_sendto);
+            p = npid(p->p_sendto);
         }
         else {
             break;
@@ -213,7 +199,7 @@ int msg_send(struct proc* current, int dest, MESSAGE* m)
     struct proc* sender = current;
     struct proc* p_dest = nproc(dest); /* proc dest */
 
-    assert(proc2pid(sender) != dest);
+    assert(proc2pid(sender) != proc2pid(p_dest));
 
     /* check for deadlock here */
     if (deadlock(proc2pid(sender), dest)) {
@@ -227,7 +213,7 @@ int msg_send(struct proc* current, int dest, MESSAGE* m)
         assert(p_dest->p_msg);
         assert(m);
 
-        memcpy(va2la(dest, p_dest->p_msg),
+        memcpy(va2la(proc2pid(nproc(dest)), p_dest->p_msg),
               va2la(proc2pid(sender), m),
               sizeof(MESSAGE));
         p_dest->p_msg = 0;
@@ -296,7 +282,7 @@ int msg_receive(struct proc* current, int src, MESSAGE* m)
     struct proc* prev = 0;
     int copyok = 0;
 
-    assert(proc2pid(p_who_wanna_recv) != src);
+    assert(proc2pid(p_who_wanna_recv) != proc2pid(nproc(src)));
 
     if ((p_who_wanna_recv->has_int_msg) &&
         ((src == TASK_ANY) || (src == INTERRUPT))) {
@@ -363,7 +349,7 @@ int msg_receive(struct proc* current, int src, MESSAGE* m)
                     */
             while (p) {
                 assert(p_from->p_flags & SENDING);
-                if (proc2pid(p) == src) { /* if p is the one */
+                if (proc2pid(p) == proc2pid(nproc(src))) { /* if p is the one */
                     p_from = p;
                     break;
                 }

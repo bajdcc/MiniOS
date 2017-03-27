@@ -118,6 +118,8 @@ void exit();
 #define proc2pid(x) ((x) -> pid)
 
 struct proc *nproc(int offset);
+struct proc *npid(int pid);
+int npoffset(int pid);
 
 void* va2la(int pid, void* va);
 

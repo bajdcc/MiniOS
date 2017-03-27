@@ -1,4 +1,8 @@
 target remote localhost:1234
 symbol-file bin/kernel.elf
-#b os_main
+b *0xc0000000
+b send_recv
+b sendrec
+b msg_receive
+b msg_send
 c

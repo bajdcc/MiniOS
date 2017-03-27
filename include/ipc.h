@@ -13,8 +13,8 @@
 
 #define TASK_SYS    1
 
-#define TASK_ANY    (NTASK + NPROC + 10)
-#define TASK_NONE   (NTASK + NPROC + 20)
+#define TASK_ANY    -1
+#define TASK_NONE   -2
 
 // IPC消息模式
 #define SEND        1

@@ -10,7 +10,7 @@ void kvm_init(pde_t *pgdir) {
     uint32_t addr;
 
     for (addr = 0; addr < pmm_size(); addr += PAGE_SIZE) {
-        vmm_map(pgdir, addr, addr, PTE_P | PTE_R | PTE_K);
+        vmm_map(pgdir, addr, addr, PTE_P | PTE_R | PTE_U);
     }
 }
 

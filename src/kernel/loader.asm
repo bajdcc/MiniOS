@@ -283,3 +283,11 @@ _syscall:
     push eax ; 恢复刚刚pop的中断返回地址
     cli
     ret
+
+; ####################### 进程间通信 #######################
+; IPC
+[global sendrec]
+sendrec:
+    mov	eax, 7
+    int	0x80
+    ret

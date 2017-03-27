@@ -32,6 +32,6 @@ void isr_stub(struct interrupt_frame *r) {
     } else if (r->int_no == ISR_SYSCALL) {
         syscall(); // 系统调用
     } else {
-        panic("isr_stub: wrong interrupt number"); // 中断号错误
+        panic("isr_stub: wrong interrupt number", 0); // 中断号错误
     }
 }

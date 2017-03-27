@@ -13,10 +13,13 @@
 
 
 // 中断重入计数
-int32_t k_reenter;
+int32_t k_reenter = 0;
 
 // 进程ID（每次递增，用于赋值给新进程）
 static uint32_t cur_pid = 0;
+
+// 时钟
+uint32_t tick = 0;
 
 // 进程PCB数组
 static struct proc pcblist[NPROC];
@@ -62,6 +65,14 @@ static struct proc *proc_alloc() {
             // 重置时间片
             pp->ticks = 0;
 
+            // init ipc data
+            pp->p_flags = 0;
+            pp->p_recvfrom = 0;
+            pp->p_sendto = 0;
+            pp->has_int_msg = 0;
+            pp->q_sending = 0;
+            pp->next_sending = 0;
+
             return pp;
         }
     }
@@ -73,12 +84,6 @@ void proc_init() {
     struct proc *pp;
     extern char __init_start;
     extern char __init_end;
-
-    // 重入计数
-    k_reenter = 0;
-
-    // PID计数清零
-    cur_pid = 0;
 
     // PCB数组清零
     memset(pcblist, 0, sizeof(struct proc) * NPROC);
@@ -141,7 +146,7 @@ static struct proc *proc_pick() {
     // 查找可用进程
     for (pp = &pcblist[0]; pp < &pcblist[NPROC]; pp++) {
 
-        if (pp->state == P_RUNABLE) { // 进程是活动的
+        if (pp->state == P_RUNABLE && pp->p_flags == 0) { // 进程是活动的，且不堵塞
 
             if (pp->ticks > greatest_ticks) {
                 greatest_ticks = pp->ticks;
@@ -159,7 +164,7 @@ static struct proc *proc_pick() {
 static void reset_time() {
     struct proc *pp;
     for (pp = &pcblist[0]; pp < &pcblist[NPROC]; pp++) {
-        if (pp->state == P_RUNABLE) {
+        if (pp->state == P_RUNABLE && pp->p_flags == 0) {
             pp->ticks = pp->priority;
         }
     }
@@ -208,7 +213,7 @@ void wakeup(uint8_t pid) {
 
     cli();
 
-    for (pp = pcblist; pp <= &pcblist[NPROC]; pp++) {
+    for (pp = pcblist; pp < &pcblist[NPROC]; pp++) {
         if (pp->pid == pid && pp->state == P_SLEEPING) {
             pp->state = P_RUNABLE;
         }
@@ -239,7 +244,7 @@ int wait() {
 
     has_child = 0;
 
-    for (pp = pcblist; pp <= &pcblist[NPROC]; pp++) {
+    for (pp = pcblist; pp < &pcblist[NPROC]; pp++) {
         if (pp->parent != proc) {
             continue; // 没有子进程
         }
@@ -336,7 +341,7 @@ int fork() {
     vmm_map(child->pgdir, (uint32_t)child->stack, (uint32_t)child->stack, PTE_P | PTE_R | PTE_U);
 
     if (child->pgdir == 0) { // 拷贝失败
-        panic("fork:");
+        panic("fork:", child->fi->cs & 0x3);
         pmm_free((uint32_t)child->stack);
         child->stack = 0;
         child->state = P_UNUSED;
@@ -361,6 +366,8 @@ int fork() {
 
 void irq_handler_clock(struct interrupt_frame *r) {
 
+    tick++;
+
     if (!proc)
         return;
 
@@ -374,4 +381,29 @@ void irq_handler_clock(struct interrupt_frame *r) {
     }
     
     schedule();
+}
+
+struct proc *nproc(int offset) {
+    return &pcblist[offset];
+}
+
+void* va2la(int pid, void* va) {
+    struct proc* pp;
+
+    for (pp = pcblist; pp < &proc[NPROC]; pp++) {
+        if (pp->pid == pid) {
+
+            uint32_t pa;
+            
+            if (vmm_ismap(pp->pgdir, (uint32_t)va, &pa)) {
+                return (void*)pa;
+            }
+
+            assert(!"vmm: va not mapped!");
+
+            return 0;
+        }
+    }
+
+    return 0;
 }

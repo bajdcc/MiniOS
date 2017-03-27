@@ -43,3 +43,23 @@ void panic(const char *msg, int ring) {
 
     for (;;) hlt();
 }
+
+// 断言失败
+void assertion_failure(char *exp, char *file, char *base_file, int line)
+{
+    printk("[ Assert(%s) failed: file: %s, base_file: %s, ln%d ]\n",
+           exp, file, base_file, line);
+
+    /**
+     * If assertion fails in a TASK, the system will halt before
+     * printl() returns. If it happens in a USER PROC, printl() will
+     * return like a common routine and arrive here. 
+     * @see sys_printx()
+     * 
+     * We use a forever loop to prevent the proc from going on:
+     */
+    while (1);
+
+    /* should never arrive here */
+        __asm__ __volatile__("ud2");
+}

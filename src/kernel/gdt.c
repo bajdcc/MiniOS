@@ -44,16 +44,18 @@ void gdt_init() {
     gp.limit = (sizeof(struct gdt_entry) * NGDT) - 1;
     gp.base = (uint32_t)&gdt;
 
+    // 注意：启用分页GDT_GR后，limit的单位是4KB，故0xfffff*4KB=4GB
+
     /* null descriptor */
-    gdt_install(0, 0, 0, 0, 0);  
+    gdt_install(0, 0, 0, 0, 0);
     /* kernel code segment type: code addr: 0 limit: 4G gran: 4KB sz: 32bit */
     gdt_install(SEL_KCODE, 0, 0xfffff, AC_RW|AC_EX|AC_DPL_KERN|AC_PR, GDT_GR|GDT_SZ);
     /* kernel data segment type: data addr: 0 limit: 4G gran: 4KB sz: bit 32bit */
-    gdt_install(SEL_KDATA, 0, 0xfffff, AC_RW|AC_DPL_KERN|AC_PR, GDT_GR|GDT_SZ); 
+    gdt_install(SEL_KDATA, 0, 0xfffff, AC_RW|AC_DPL_KERN|AC_PR, GDT_GR|GDT_SZ);
     /* user code segment type: code addr: 0 limit: 4G gran: 4KB sz: 32bit */
-    gdt_install(SEL_UCODE, 0, 0xfffff, AC_RW|AC_EX|AC_DPL_USER|AC_PR, GDT_GR|GDT_SZ); 
+    gdt_install(SEL_UCODE, 0, 0xfffff, AC_RW|AC_EX|AC_DPL_USER|AC_PR, GDT_GR|GDT_SZ);
     /* user code segment type: data addr: 0 limit: 4G gran: 4KB sz: 32bit */
-    gdt_install(SEL_UDATA, 0, 0xfffff, AC_RW|AC_DPL_USER|AC_PR, GDT_GR|GDT_SZ); 
+    gdt_install(SEL_UDATA, 0, 0xfffff, AC_RW|AC_DPL_USER|AC_PR, GDT_GR|GDT_SZ);
 
     tss_init();
     gdt_flush();

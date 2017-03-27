@@ -131,8 +131,8 @@ fault%1:
 %macro m_irq 1
 [global irq%1]
 irq%1:
-    push %1+32
-    call save
+    push %1+32              ; 参见于渊的minix代码
+    call save               ; 保存现场
     in  al, 0x21            ; `.
     or  al, (1 << %1)       ;  | 屏蔽当前中断
     out 0x21, al            ; /
@@ -143,7 +143,7 @@ irq%1:
     push eax
     mov eax, isr_stub
     sti
-    call eax ; 中断处理
+    call eax                ; 中断处理
     cli
     pop ecx
     in  al, 0x21            ; `.
@@ -237,7 +237,7 @@ save:
     inc     dword [k_reenter]           ; k_reenter++;
     cmp     dword [k_reenter], 0        ; if (k_reenter == 0)
     jne     .1                          ; {
-    mov     ax, SEL_KERN_DATA           ; 内核数据段
+    mov     ax, SEL_KERN_DATA           ; 切换到内核数据段
     mov     ds, ax
     mov     es, ax
     mov     fs, ax
@@ -253,13 +253,10 @@ save:
 [extern proc]
 [global restart]
 restart:
-    call tss_reset
+    call tss_reset ; 修改tss
     mov eax, [proc]
     mov esp, [eax]  ; esp = proc->fi
 restart_reenter:
-    ;mov eax, [esp + 4]
-    ;cmp eax,0x35
-    ;ja pp
     dec dword [k_reenter]
     pop gs
     pop fs
@@ -267,7 +264,7 @@ restart_reenter:
     pop ds
     popad
     add esp, 8
-    iretd
+    iretd ; 中断返回，弹出堆栈中的剩余信息，刷新cs和ip
 
 ; ####################### 系统调用 #######################
 ; int 0x80
@@ -286,6 +283,3 @@ _syscall:
     push eax ; 恢复刚刚pop的中断返回地址
     cli
     ret
-
-pp:
-jmp $

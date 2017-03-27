@@ -24,17 +24,18 @@ void print_status() {
     printk("ss: %x\n", reg4);
 }
 
-void panic(const char *msg) {
+void panic(const char *msg, int ring) {
     cli();
 
     vga_setcolor(VGA_COLOR_RED, VGA_COLOR_BLACK);
 
-    printk("***** KERNEL PANIC *****\n");
+    printk("***** PANIC *****\n");
 
     if (proc) {
         printk("Current proc: `%s`(PID: %d)\n", proc->name, proc->pid);
     }
 
+    printk("Ring: %d\n", ring);
     printk("Message: %s\n", msg);
     printk("\n");
     printk("Status:\n");

@@ -57,5 +57,7 @@ void tss_set(uint16_t ss0, uint32_t esp0) {
 
 // 重置当前进程的TSS
 void tss_reset() {
+    // TSS用于当切换到ring0时设置堆栈
+    // 每个进程有一个内核堆栈
     tss_set(SEL_KDATA << 3, (uint32_t)proc->stack + PAGE_SIZE);
 }

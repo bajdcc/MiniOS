@@ -182,7 +182,7 @@ succ:
 
     ; special, clear pipe-line and jump
     ; 前面读取软盘数据到0x8000处，现在跳转至0x8000 
-    jmp dword Selec_Code32_R0:0x8000
+    jmp dword Selec_Code32_R0:0x8000 ; 自动切换段寄存器
 
 msg_boot:
     db "[Bootsector] loading...",13,10,0 ; 13 10(0x0D 0x0A)是'\r \n'

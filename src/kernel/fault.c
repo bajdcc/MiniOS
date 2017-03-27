@@ -117,35 +117,26 @@ void fault_init()
 
 }
 
-static void page_fault() {
+static void page_fault(struct interrupt_frame *r) {
     uint32_t cr2;
 
     __asm__ volatile ("mov %%cr2, %0":"=r"(cr2));
 
-    printk("addr: 0x%x\n", cr2);
+    printk("Page fault! [addr: 0x%x]\n", cr2);
+    panic(fault_msg[r->int_no], r->cs & 0x3);
 }
 
 void fault_handler(struct interrupt_frame *r) {
 
     // Page Fault
     if (r->int_no == 14) { // 页面错误
-        page_fault();
+        page_fault(r);
     }
 
-    /* fault happen in kernel(ring0) */
-    if ((r->cs & 0x3) == CPL_KERN) {
-        if (r->int_no < 32) {
-            printk("System fault!\n");
-            panic(fault_msg[r->int_no]);
-        } else {
-            panic("Unknown Interrupt, System Halted!\n");
-        }
+    if (r->int_no < 32) {
+        printk("System fault!\n");
+        panic(fault_msg[r->int_no], r->cs & 0x3);
+    } else {
+        panic("Unknown Interrupt, System Halted!\n", r->cs & 0x3);
     }
-
-    /* fault happen in user(ring3) */
-    vga_setcolor(VGA_COLOR_RED, VGA_COLOR_BLACK);
-    
-    printk("***** USERMODE PANIC *****\n");
-    
-    vga_setcolor(VGA_COLOR_LIGHTGREY, VGA_COLOR_BLACK);
 }

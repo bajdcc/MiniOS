@@ -155,6 +155,7 @@ static struct proc *proc_pick() {
     return pp_ready;
 }
 
+// 重置时间片
 static void reset_time() {
     struct proc *pp;
     for (pp = &pcblist[0]; pp < &pcblist[NPROC]; pp++) {
@@ -181,8 +182,8 @@ void schedule() {
             // 关中断
             cli();
 
-            uvm_switch(pp);
-            proc_switch(pp);
+            uvm_switch(pp); // 切换页表
+            proc_switch(pp); // 切换进程
 
             // 开中断
             sti();
@@ -218,7 +219,7 @@ void wakeup(uint8_t pid) {
 
 // 进程销毁
 static void proc_destroy(struct proc *pp) {
-    printk("destroy: pid=%d\n", pp->pid);
+
     pmm_free((uint32_t)pp->stack); // 释放堆栈内存
     pp->stack = 0;
     uvm_free(pp->pgdir); // 释放页表

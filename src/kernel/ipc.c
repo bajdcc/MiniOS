@@ -6,6 +6,15 @@
 
 extern int sendrec(int function, int src_dest, MESSAGE* msg, int caller);
 
+int _sendrec(int function, int src_dest, MESSAGE* msg, int caller) {
+    int ret;
+    while ((ret = sendrec(function, src_dest, msg, caller)) == BLOCKED) {
+        int i;
+        for (i = 0; i < 0x100; i++);
+    }
+    return ret;
+}
+
 /*****************************************************************************
  *                                sys_sendrec
  *****************************************************************************/
@@ -31,6 +40,7 @@ int sys_sendrec(int function, int src_dest, MESSAGE* m, struct proc* p)
     MESSAGE* mla = (MESSAGE*)va2la(caller, m); // 获取调用方消息
     mla->source = caller;
 
+            return ret;
     assert(mla->source != src_dest); //确保不向自身发消息，防止死锁
 
     /**
@@ -41,13 +51,9 @@ int sys_sendrec(int function, int src_dest, MESSAGE* m, struct proc* p)
      */
     if (function == SEND) {
         ret = msg_send(p, src_dest, m); // 发送消息
-        if (ret != 0)
-            return ret;
     }
     else if (function == RECEIVE) {
         ret = msg_receive(p, src_dest, m); // 接收消息
-        if (ret != 0)
-            return ret;
     }
     else {
         printk("invalid function: "
@@ -55,7 +61,11 @@ int sys_sendrec(int function, int src_dest, MESSAGE* m, struct proc* p)
         assert(!"sys_sendrec failed");
     }
 
-    return 0;
+    if (p->p_flags != 0) { // blocked
+        return BLOCKED;
+    }
+
+    return ret;
 }
 
 /*****************************************************************************
@@ -84,13 +94,13 @@ int send_recv(int function, int src_dest, MESSAGE* msg)
 
     switch (function) {
     case BOTH: // 先发送再接收
-        ret = sendrec(SEND, src_dest, msg, caller);
+        ret = _sendrec(SEND, src_dest, msg, caller);
         if (ret == 0)
-            ret = sendrec(RECEIVE, src_dest, msg, caller);
+            ret = _sendrec(RECEIVE, src_dest, msg, caller);
         break;
     case SEND:
     case RECEIVE:
-        ret = sendrec(function, src_dest, msg, caller);
+        ret = _sendrec(function, src_dest, msg, caller);
         break;
     default:
         assert((function == BOTH) ||
@@ -129,7 +139,6 @@ void reset_msg(MESSAGE* p)
 void block(struct proc* p)
 {
     assert(p->p_flags);
-    while (p->p_flags); // blocked?
 }
 
 /*****************************************************************************

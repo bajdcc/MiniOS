@@ -1,5 +1,4 @@
 target remote localhost:1234
 symbol-file bin/kernel.elf
 #b *0xc0000000
-b block
 c

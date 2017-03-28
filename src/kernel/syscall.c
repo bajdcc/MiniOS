@@ -177,7 +177,7 @@ int call1(int no, int arg) {
     int ret = -1;
     __asm__ __volatile__("mov 0x8(%ebp), %eax\n\t"
         "push %eax\n\t"
-        "mov 0x4(%ebp), %eax\n\t"
+        "mov 0xc(%ebp), %eax\n\t"
         "int $0x80\n\t"
         "mov %eax, -0x4(%ebp)");
     return ret;

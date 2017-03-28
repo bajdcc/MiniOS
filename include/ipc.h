@@ -24,6 +24,7 @@
 #define SENDING     0x02    /* set when proc trying to send */
 #define RECEIVING   0x04    /* set when proc trying to recv */
 #define INTERRUPT   -10
+#define BLOCKED     -20
 
 // IPC消息种类
 enum msg_type {

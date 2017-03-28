@@ -13,6 +13,8 @@ int sys_ipc();
 
 // -------------------------------
 
+extern void user_main();
+
 extern void sys_tasks0();
 extern int sys_ticks();
 

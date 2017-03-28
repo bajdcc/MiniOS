@@ -193,6 +193,8 @@ void schedule() {
 
             // 开中断
             sti();
+
+            return;
         }
     }
 }
@@ -419,7 +421,7 @@ void* va2la(int pid, void* va) {
             uint32_t pa;
             
             if (vmm_ismap(pp->pgdir, (uint32_t)va, &pa)) {
-                return (void*)pa;
+                return (void*)((uint32_t)pa + OFFSET_INDEX((uint32_t)va));
             }
 
             assert(!"vmm: va not mapped!");

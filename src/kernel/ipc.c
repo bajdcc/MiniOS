@@ -4,7 +4,7 @@
 #include <print.h>
 #include <proc.h>
 
-extern int sendrec(int function, int src_dest, MESSAGE* msg);
+extern int sendrec(int function, int src_dest, MESSAGE* msg, int caller);
 
 /*****************************************************************************
  *                                sys_sendrec
@@ -21,12 +21,8 @@ extern int sendrec(int function, int src_dest, MESSAGE* msg);
  *****************************************************************************/
 int sys_sendrec(int function, int src_dest, MESSAGE* m, struct proc* p)
 {
-    if (src_dest > 0) {
-        src_dest = npoffset(src_dest);
-    }
-
     assert(k_reenter == 0);    /* make sure we are not in ring0 */
-    assert((src_dest >= 0 && src_dest < NTASK + NPROC) ||
+    assert((src_dest > 0) ||
            src_dest == TASK_ANY ||
            src_dest == INTERRUPT);
 
@@ -56,7 +52,7 @@ int sys_sendrec(int function, int src_dest, MESSAGE* m, struct proc* p)
     else {
         printk("invalid function: "
               "%d (SEND:%d, RECEIVE:%d).", function, SEND, RECEIVE);
-        panic("sys_sendrec failed", 0);
+        assert(!"sys_sendrec failed");
     }
 
     return 0;
@@ -79,20 +75,22 @@ int sys_sendrec(int function, int src_dest, MESSAGE* m, struct proc* p)
  *****************************************************************************/
 int send_recv(int function, int src_dest, MESSAGE* msg)
 {
-    int ret = 0;
+    int ret = 0, caller;
+
+    caller = proc2pid(proc);
 
     if (function == RECEIVE)
         memset(msg, 0, sizeof(MESSAGE));
 
     switch (function) {
     case BOTH: // 先发送再接收
-        ret = sendrec(SEND, src_dest, msg);
+        ret = sendrec(SEND, src_dest, msg, caller);
         if (ret == 0)
-            ret = sendrec(RECEIVE, src_dest, msg);
+            ret = sendrec(RECEIVE, src_dest, msg, caller);
         break;
     case SEND:
     case RECEIVE:
-        ret = sendrec(function, src_dest, msg);
+        ret = sendrec(function, src_dest, msg, caller);
         break;
     default:
         assert((function == BOTH) ||
@@ -131,7 +129,7 @@ void reset_msg(MESSAGE* p)
 void block(struct proc* p)
 {
     assert(p->p_flags);
-    schedule(); // 堵塞，切换到其他进程
+    while (p->p_flags); // blocked?
 }
 
 /*****************************************************************************
@@ -165,7 +163,7 @@ void unblock(struct proc* p)
  *****************************************************************************/
 int deadlock(int src, int dest)
 {
-    struct proc* p = nproc(dest);
+    struct proc* p = npid(dest);
     while (1) {
         if (p->p_flags & SENDING) {
             if (p->p_sendto == src) {
@@ -197,14 +195,14 @@ int deadlock(int src, int dest)
 int msg_send(struct proc* current, int dest, MESSAGE* m)
 {
     struct proc* sender = current;
-    struct proc* p_dest = nproc(dest); /* proc dest */
+    struct proc* p_dest = npid(dest); /* proc dest */
 
     assert(proc2pid(sender) != proc2pid(p_dest));
 
     /* check for deadlock here */
     if (deadlock(proc2pid(sender), dest)) {
         printk(">>DEADLOCK<< %s->%s", sender->name, p_dest->name);
-        panic(">>DEADLOCK<<", 0);
+        assert(!">>DEADLOCK<<");
     }
 
     if ((p_dest->p_flags & RECEIVING) && /* dest is waiting for the msg */
@@ -213,9 +211,10 @@ int msg_send(struct proc* current, int dest, MESSAGE* m)
         assert(p_dest->p_msg);
         assert(m);
 
-        memcpy(va2la(proc2pid(nproc(dest)), p_dest->p_msg),
+        memcpy(va2la(dest, p_dest->p_msg),
               va2la(proc2pid(sender), m),
               sizeof(MESSAGE));
+
         p_dest->p_msg = 0;
         p_dest->p_flags &= ~RECEIVING; /* dest has received the msg */
         p_dest->p_recvfrom = TASK_NONE;
@@ -282,7 +281,7 @@ int msg_receive(struct proc* current, int src, MESSAGE* m)
     struct proc* prev = 0;
     int copyok = 0;
 
-    assert(proc2pid(p_who_wanna_recv) != proc2pid(nproc(src)));
+    assert(proc2pid(p_who_wanna_recv) != src);
 
     if ((p_who_wanna_recv->has_int_msg) &&
         ((src == TASK_ANY) || (src == INTERRUPT))) {
@@ -334,7 +333,7 @@ int msg_receive(struct proc* current, int src, MESSAGE* m)
         /* p_who_wanna_recv wants to receive a message from
          * a certain proc: src.
          */
-        p_from = nproc(src);
+        p_from = npid(src);
 
         if ((p_from->p_flags & SENDING) &&
             (p_from->p_sendto == proc2pid(p_who_wanna_recv))) {
@@ -349,7 +348,7 @@ int msg_receive(struct proc* current, int src, MESSAGE* m)
                     */
             while (p) {
                 assert(p_from->p_flags & SENDING);
-                if (proc2pid(p) == proc2pid(nproc(src))) { /* if p is the one */
+                if (proc2pid(p) == proc2pid(npid(src))) { /* if p is the one */
                     p_from = p;
                     break;
                 }

@@ -47,7 +47,7 @@ void panic(const char *msg, int ring) {
 // 断言失败
 void assertion_failure(char *exp, char *file, char *base_file, int line)
 {
-    printk("[ Assert(%s) failed: file: %s, base_file: %s, ln%d ]\n",
+    printk("[ Assert(%s) failed: file: %s, base_file: %s, line: %d ]\n",
            exp, file, base_file, line);
 
     /**

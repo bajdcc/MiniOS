@@ -11,7 +11,13 @@ Simple x86-based OS.
 4. **[0.2.3]** 添加PMM
 5. **[0.2.4]** 添加VMM
 6. **[0.2.5]** 添加多进程机制，完善注释
+7. **[0.2.6]** 实现进程间通信IPC
 
+## 运行截图
+
+### 进程间通信
+
+![ipc](https://github.com/bajdcc/MiniOS/raw/master/screenshot/ipc.png)
 
 ## 构建工具
 **平台：Ubuntu 16.04.2 x86**
@@ -39,3 +45,4 @@ make run    # run with qemu
 ## References
 * [OS67](https://github.com/SilverRainZ/OS67)
 * [osdev](http://wiki.osdev.org/)
+* Orange'S：一个操作系统的实现 - 于渊

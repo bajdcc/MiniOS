@@ -6,12 +6,27 @@
 
 extern int sendrec(int function, int src_dest, MESSAGE* msg, int caller);
 
+static void ipc_dump(int function, int src_dest, MESSAGE* msg, int caller, const char *direction) {
+    const char *str;
+    switch (function) {
+        case SEND:
+            str = "[ipc] proc#%d %s send | %d --> %d(%s)\n";
+            break;
+        case RECEIVE:
+            str = "[ipc] proc#%d %s recv | %d <-- %d(%s)\n";
+            break;
+        default:
+            str = "[ipc] proc#%d %s ???? | %d <-- %d(%s)\n";
+            break;
+    }
+    printk(str, proc2pid(proc), direction, caller, src_dest, (src_dest == TASK_ANY) ? "task_any" : "task_normal");
+}
+
 int _sendrec(int function, int src_dest, MESSAGE* msg, int caller) {
     int ret;
-    while ((ret = sendrec(function, src_dest, msg, caller)) == BLOCKED) {
-        int i;
-        for (i = 0; i < 0x100; i++);
-    }
+    ipc_dump(function, src_dest, msg, caller, ">>");
+    ret = sendrec(function, src_dest, msg, caller);
+    ipc_dump(function, src_dest, msg, caller, "<<");
     return ret;
 }
 
@@ -40,7 +55,6 @@ int sys_sendrec(int function, int src_dest, MESSAGE* m, struct proc* p)
     MESSAGE* mla = (MESSAGE*)va2la(caller, m); // 获取调用方消息
     mla->source = caller;
 
-            return ret;
     assert(mla->source != src_dest); //确保不向自身发消息，防止死锁
 
     /**
@@ -59,10 +73,6 @@ int sys_sendrec(int function, int src_dest, MESSAGE* m, struct proc* p)
         printk("invalid function: "
               "%d (SEND:%d, RECEIVE:%d).", function, SEND, RECEIVE);
         assert(!"sys_sendrec failed");
-    }
-
-    if (p->p_flags != 0) { // blocked
-        return BLOCKED;
     }
 
     return ret;
@@ -138,7 +148,11 @@ void reset_msg(MESSAGE* p)
  *****************************************************************************/
 void block(struct proc* p)
 {
+    int pid;
+    pid = proc2pid(p);
     assert(p->p_flags);
+    __asm__("int $0x20"); // 强制切换
+    assert(pid != proc2pid(proc)); // 确保切换成功
 }
 
 /*****************************************************************************
@@ -210,8 +224,8 @@ int msg_send(struct proc* current, int dest, MESSAGE* m)
 
     /* check for deadlock here */
     if (deadlock(proc2pid(sender), dest)) {
-        printk(">>DEADLOCK<< %s->%s", sender->name, p_dest->name);
-        assert(!">>DEADLOCK<<");
+        printk("DEADLOCK! %d --> %d\n", sender->pid, p_dest->pid);
+        assert(!"DEADLOCK");
     }
 
     if ((p_dest->p_flags & RECEIVING) && /* dest is waiting for the msg */

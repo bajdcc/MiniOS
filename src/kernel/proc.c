@@ -12,6 +12,7 @@
 #include <print.h>
 #include <proc.h>
 
+#define PROC_IS_RUNABLE(pp) ((pp)->state == P_RUNABLE && (pp)->p_flags == 0)
 
 // 中断重入计数
 int32_t k_reenter = 0;
@@ -135,7 +136,7 @@ static void proc_switch(struct proc *pp) {
     if (proc->state == P_RUNNING) {
         proc->state = P_RUNABLE;
     }
-    pp->state = P_RUNNING;
+    pp->state = P_RUNABLE;
     proc = pp; // 切换当前活动进程
 }
 
@@ -147,7 +148,7 @@ static struct proc *proc_pick() {
     // 查找可用进程
     for (pp = &pcblist[0]; pp < &pcblist[NPROC]; pp++) {
 
-        if (pp->state == P_RUNABLE && pp->p_flags == 0) { // 进程是活动的，且不堵塞
+        if (PROC_IS_RUNABLE(pp)) { // 进程是活动的，且不堵塞
 
             if (pp->ticks > greatest_ticks) {
                 greatest_ticks = pp->ticks;
@@ -163,11 +164,17 @@ static struct proc *proc_pick() {
 
 // 重置时间片
 static void reset_time() {
+    int i;
     struct proc *pp;
+    i = 0;
     for (pp = &pcblist[0]; pp < &pcblist[NPROC]; pp++) {
-        if (pp->state == P_RUNABLE && pp->p_flags == 0) {
+        if (PROC_IS_RUNABLE(pp)) {
+            i++;
             pp->ticks = pp->priority;
         }
+    }
+    if (i == 0) {
+        assert(!"no runable process!");
     }
 }
 
@@ -374,13 +381,15 @@ void irq_handler_clock(struct interrupt_frame *r) {
     if (!proc)
         return;
 
-    if (proc->ticks > 0) {
-        proc->ticks--;
-        return;
-    }
+    if (PROC_IS_RUNABLE(proc)) {
+        if (proc->ticks > 0) {
+            proc->ticks--;
+            return;
+        }
 
-    if (k_reenter != 0) {
-        return;
+        if (k_reenter != 0) { // 防止重入
+            return;
+        }
     }
     
     schedule();

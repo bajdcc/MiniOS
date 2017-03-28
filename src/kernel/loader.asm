@@ -278,7 +278,7 @@ _syscall:
     mov eax, isr_stub
     push esi
     call eax ; 中断处理
-    mov [esi + 44], eax
+    mov [esi + 44], eax ; 系统调用返回值
     mov eax, [esi + 48]
     push eax ; 恢复刚刚pop的中断返回地址
     cli

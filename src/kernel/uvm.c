@@ -10,6 +10,7 @@ void kvm_init(pde_t *pgdir) {
     uint32_t addr;
 
     for (addr = 0; addr < pmm_size(); addr += PAGE_SIZE) {
+        // TODO: 在以后的实现中，不要忘记改回成PTE_K
         vmm_map(pgdir, addr, addr, PTE_P | PTE_R | PTE_U); // 原本是内核空间，为实现微内核临时设为PTE_U
     }
 }

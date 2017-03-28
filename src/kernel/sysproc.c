@@ -10,17 +10,15 @@ int sys_fork() {
 }
 
 int sys_exit() {
+    int i;
+    i = proc->pid;
     exit();
+    printk("proc#%d exit\n", i);
     return 0;
 }
 
 int sys_exec() {
-    int i;
-
-    if (argint(0, &i) < 0) {
-        return -1;
-    }
-    printk("exec: pid=%d, arg=%d\n", proc->pid, i);
+    printk("exec: pid=%d\n", proc->pid);
     return 0;
 }
 
@@ -75,32 +73,39 @@ static void halt() {
     while (1);
 }
 
-static void delay() {
-    int i;
+static int delay() {
+    volatile int i;
 
-    for (i = 0; i < 0x100000; i++);
+    for (i = 0; i < 0x1000000; i++);
+    return i;
 }
 
 void user_main() {
 
     int i;
 
-    if ((i = call(SYS_FORK)) != 0) {
-        delay();
+    i = call(SYS_FORK);
+
+    delay();
+    if (i != 0) {
         sys_tasks0();
         delay();
         call(SYS_WAIT);
     } else {
-        delay();
-        delay();
-        call1(SYS_EXEC, i);
-        delay();
-        i = sys_ticks();
-        delay();
-        call1(SYS_EXEC, i);
-        delay();
-        call(SYS_EXIT);
+        while (1) {
+            delay();
+            i = sys_ticks();
+            delay();
+            printk("!! proc#%d received tick '%d'\n", proc2pid(proc), i);
+            delay();
+            delay();
+            delay();
+            delay();
+        }
     }
+
+    printk("halt...\n");
+
     halt();
 }
 
@@ -114,6 +119,7 @@ void sys_tasks0() {
         switch (msg.type) {
         case SYS_TICKS:
             msg.RETVAL = tick;
+            printk("!! proc #%d sent tick '%d'\n", proc2pid(proc), tick);
             send_recv(SEND, src, &msg);
             break;
         default:

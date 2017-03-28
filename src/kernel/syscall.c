@@ -155,7 +155,7 @@ void syscall() {
 
     cn = proc->fi->eax; // eax表示调用号
     
-    printk("proc#%d: %s\n", proc->pid, sys_name[cn]);
+    //printk("proc#%d: %s\n", proc->pid, sys_name[cn]);
 
     if (cn > 0 && cn <= NSYSCALL && sys_routines[cn]) {
         proc->fi->eax = sys_routines[cn]();
@@ -166,18 +166,8 @@ void syscall() {
 
 // http://www.cnblogs.com/taek/archive/2012/02/05/2338838.html
 int call(int no) {
-    int ret = -1;
+    volatile int ret = -1;
     __asm__ __volatile__("mov 0x8(%ebp), %eax\n\t"
-        "int $0x80\n\t"
-        "mov %eax, -0x4(%ebp)");
-    return ret;
-}
-
-int call1(int no, int arg) {
-    int ret = -1;
-    __asm__ __volatile__("mov 0x8(%ebp), %eax\n\t"
-        "push %eax\n\t"
-        "mov 0xc(%ebp), %eax\n\t"
         "int $0x80\n\t"
         "mov %eax, -0x4(%ebp)");
     return ret;

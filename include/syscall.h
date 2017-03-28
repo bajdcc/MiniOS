@@ -39,6 +39,5 @@ void syscall();
 
 // 用户调用
 int call(int no);
-int call1(int no, int arg);
 
 #endif

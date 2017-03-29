@@ -98,6 +98,7 @@ struct tss_entry {
 
 #define IDT_SS   0x1        // 存储段 store segment
 #define IDT_DPL_KERN 0x0    // 内核特权级 descriptor privilege level
+#define IDT_DPL_SYST 0x2    // 系统服务特权级 descriptor privilege level
 #define IDT_DPL_USER 0x6    // 用户特权级 descriptor privilege level
 #define IDT_PR  0x8         // 有效位 present in memory
 
@@ -109,9 +110,6 @@ void idt_install(uint8_t num, uint32_t base, uint16_t selector, uint8_t gate, ui
 
 // 设置任务状态段
 void tss_install();
-
-// 设置任务状态段
-void tss_set(uint16_t ss0, uint32_t esp0);
 
 // 设置TSS为当前进程堆栈
 extern void tss_reset();

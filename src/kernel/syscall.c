@@ -141,7 +141,7 @@ int sys_none() {
 // 初始化系统调用
 void sys_init() {
     // 注册中断调用
-    idt_install(ISR_SYSCALL, (uint32_t)_syscall, SEL_KCODE << 3, GATE_TRAP, IDT_PR | IDT_DPL_USER);
+    idt_install(ISR_SYSCALL, (uint32_t)_syscall, SEL_KCODE << 3, GATE_TRAP, IDT_PR | IDT_DPL_SYST);
 }
 
 // 系统调用

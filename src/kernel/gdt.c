@@ -36,7 +36,7 @@ void gdt_install(uint8_t num, uint32_t base, uint32_t limit, uint8_t access, uin
 void tss_init() {
     gdt_install(SEL_TSS, (uint32_t)&tss, sizeof(tss), AC_PR|AC_AC|AC_EX, GDT_GR); 
     /* for tss, access_reverse bit is 1 */
-    gdt[5].access &= ~AC_RE;
+    gdt[SEL_TSS].access &= ~AC_RE;
 }
 
 void gdt_init() {
@@ -56,6 +56,10 @@ void gdt_init() {
     gdt_install(SEL_UCODE, 0, 0xfffff, AC_RW|AC_EX|AC_DPL_USER|AC_PR, GDT_GR|GDT_SZ);
     /* user code segment type: data addr: 0 limit: 4G gran: 4KB sz: 32bit */
     gdt_install(SEL_UDATA, 0, 0xfffff, AC_RW|AC_DPL_USER|AC_PR, GDT_GR|GDT_SZ);
+    /* systask code segment type: code addr: 0 limit: 4G gran: 4KB sz: 32bit */
+    gdt_install(SEL_SCODE, 0, 0xfffff, AC_RW|AC_EX|AC_DPL_SYST|AC_PR, GDT_GR|GDT_SZ);
+    /* systask code segment type: data addr: 0 limit: 4G gran: 4KB sz: 32bit */
+    gdt_install(SEL_SDATA, 0, 0xfffff, AC_RW|AC_DPL_SYST|AC_PR, GDT_GR|GDT_SZ);
 
     tss_init();
     gdt_flush();

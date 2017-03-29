@@ -96,7 +96,7 @@ void user_main() {
             delay();
             i = sys_ticks();
             delay();
-            printk("!! proc#%d received tick '%d'\n", proc2pid(proc), i);
+            printk("!! proc#%d <-- tick '%d'\n", proc2pid(proc), i);
             delay();
             delay();
             delay();
@@ -119,7 +119,7 @@ void sys_tasks0() {
         switch (msg.type) {
         case SYS_TICKS:
             msg.RETVAL = tick;
-            printk("!! proc #%d sent tick '%d'\n", proc2pid(proc), tick);
+            printk("!! proc#%d --> tick '%d'\n", proc2pid(proc), tick);
             send_recv(SEND, src, &msg);
             break;
         default:

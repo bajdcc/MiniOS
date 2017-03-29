@@ -112,8 +112,8 @@ void proc_init() {
     uvm_init(pp->pgdir, &__init_start, size);
 
     // 拷贝中断现场，在执行完_isr_stub_ret恢复
-    pp->fi->cs = (SEL_UCODE << 3) | 0x3; // 0x3 RPL=3
-    pp->fi->ds = (SEL_UDATA << 3) | 0x3;
+    pp->fi->cs = (SEL_SCODE << 3) | RPL_SYST; // 0x1 RPL=1
+    pp->fi->ds = (SEL_SDATA << 3) | RPL_SYST; // SYS TASK
     pp->fi->es = pp->fi->ds;
     pp->fi->fs = pp->fi->ds;
     pp->fi->gs = pp->fi->ds;
@@ -126,7 +126,7 @@ void proc_init() {
 
     pp->state = P_RUNABLE; // 状态设置为可运行
 
-    pp->priority = PRIOR_KERN; // 初始化优先级
+    pp->priority = PRIOR_SYST; // 初始化优先级
 
     proc = pp;
 }

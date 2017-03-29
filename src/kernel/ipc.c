@@ -7,8 +7,8 @@
 extern int sendrec(int function, int src_dest, MESSAGE* msg, int caller);
 
 static void ipc_dump(int function, int src_dest, MESSAGE* msg, int caller, const char *direction) {
-    const char *str;
-    switch (function) {
+    //const char *str;
+    /*switch (function) {
         case SEND:
             str = "[ipc] proc#%d %s send | %d --> %d(%s)\n";
             break;
@@ -18,8 +18,8 @@ static void ipc_dump(int function, int src_dest, MESSAGE* msg, int caller, const
         default:
             str = "[ipc] proc#%d %s ???? | %d <-- %d(%s)\n";
             break;
-    }
-    printk(str, proc2pid(proc), direction, caller, src_dest, (src_dest == TASK_ANY) ? "task_any" : "task_normal");
+    }*/
+    //printk(str, proc2pid(proc), direction, caller, src_dest, (src_dest == TASK_ANY) ? "task_any" : "task_normal");
 }
 
 int _sendrec(int function, int src_dest, MESSAGE* msg, int caller) {

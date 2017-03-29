@@ -43,7 +43,7 @@ typedef uint32_t pte_t;
 #define PTE_P   0x1     // 有效位 Present
 #define PTE_R   0x2     // 读写位 Read/Write, can be read&write when set
 #define PTE_U   0x4     // 用户位 User / Kern
-#define PTE_K   0x0     // 内核位 User / Kern 
+#define PTE_K   0x0     // 内核位 User / Kern
 #define PTE_W   0x8     // 写回 Write through
 #define PTE_D   0x10    // 不缓存 Cache disable
 #define PTE_A   0x20    // 可访问 Accessed

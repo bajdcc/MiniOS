@@ -18,8 +18,9 @@
 #define P_SLEEPING  0x4 // 休眠中
 #define P_ZOMBIE    0x5 // 死亡
 
-#define PRIOR_KERN  0x10 // init进程优先级
-#define PRIOR_USER  0x20 // 用户进程优先级
+// 优先级就是时间片分配
+#define PRIOR_SYST  0x20 // 系统服务优先级
+#define PRIOR_USER  0x10 // 用户进程优先级
 
 /**
  * MESSAGE 结构 / 借鉴自 MINIX

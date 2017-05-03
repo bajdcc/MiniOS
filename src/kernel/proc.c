@@ -226,6 +226,7 @@ void wakeup(uint8_t pid) {
     for (pp = pcblist; pp < &pcblist[NPROC]; pp++) {
         if (pp->pid == pid && pp->state == P_SLEEPING) {
             pp->state = P_RUNABLE;
+            return;
         }
     }
 
@@ -294,8 +295,11 @@ void exit() {
         sti();
         return;
     }
+
+    wakeup(proc->parent->pid); // 唤醒当前进程的父进程
+    proc->state = P_ZOMBIE; // 标记为僵尸进程，等待父进程wait来销毁
     
-    for (pp = pcblist; pp < &proc[NPROC]; pp++) {
+    for (pp = pcblist; pp < &pcblist[NPROC]; pp++) {
         if (pp->parent == proc) { // 找到子进程
             pp->parent = proc->parent; // 将子进程的父进程置为当前进程的父进程（当前进程skip）
             if (pp->state == P_ZOMBIE) { // 若子进程为僵尸进程
@@ -303,9 +307,6 @@ void exit() {
             }
         }
     }
-
-    wakeup(proc->parent->pid); // 唤醒当前进程的父进程
-    proc->state = P_ZOMBIE; // 标记为僵尸进程，等待父进程wait来销毁
 
     sti();
 }
@@ -402,7 +403,7 @@ struct proc *nproc(int offset) {
 struct proc *npid(int pid) {
     struct proc* pp;
 
-    for (pp = pcblist; pp < &proc[NPROC]; pp++) {
+    for (pp = pcblist; pp < &pcblist[NPROC]; pp++) {
         if (pp->pid == pid) {
             return pp;
         }
@@ -424,7 +425,7 @@ int npoffset(int pid) {
 void* va2la(int pid, void* va) {
     struct proc* pp;
 
-    for (pp = pcblist; pp < &proc[NPROC]; pp++) {
+    for (pp = pcblist; pp < &pcblist[NPROC]; pp++) {
         if (pp->pid == pid) {
 
             uint32_t pa;

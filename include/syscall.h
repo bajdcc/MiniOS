@@ -14,7 +14,6 @@
 #define SYS_SLEEP   4
 #define SYS_WAIT    5
 #define SYS_KILL    6
-#define SYS_IPC     7 // IPC实现微内核
 
 // 指定地址取整数
 int fetchint(uint32_t addr, int *ip);

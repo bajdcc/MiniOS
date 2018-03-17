@@ -7,12 +7,12 @@
 #include <vmm.h>
 #include <uvm.h>
 #include <isr.h>
-#include <ipc.h>
 #include <string.h>
 #include <print.h>
 #include <proc.h>
 
-#define PROC_IS_RUNABLE(pp) ((pp)->state == P_RUNABLE && (pp)->p_flags == 0)
+#define PROC_IS_RUNABLE(pp) ((pp)->state == P_RUNABLE)
+#define PROC_IS_RUNNING(pp) ((pp)->state == P_RUNNING)
 
 // 中断重入计数
 int32_t k_reenter = 0;
@@ -66,14 +66,6 @@ static struct proc *proc_alloc() {
 
             // 重置时间片
             pp->ticks = 0;
-
-            // init ipc data
-            pp->p_flags = 0;
-            pp->p_recvfrom = TASK_NONE;
-            pp->p_sendto = TASK_NONE;
-            pp->has_int_msg = 0;
-            pp->q_sending = 0;
-            pp->next_sending = 0;
 
             return pp;
         }
@@ -133,10 +125,11 @@ void proc_init() {
 
 // 进程切换
 static void proc_switch(struct proc *pp) {
-    if (proc->state == P_RUNNING) {
+
+    if (proc->state == P_RUNNING)
         proc->state = P_RUNABLE;
-    }
-    pp->state = P_RUNABLE;
+    assert(pp->state == P_RUNABLE);
+    pp->state = P_RUNNING;
     proc = pp; // 切换当前活动进程
 }
 
@@ -174,7 +167,10 @@ static void reset_time() {
         }
     }
     if (i == 0) {
-        assert(!"no runable process!");
+        if (PROC_IS_RUNNING(proc))
+            proc->state = P_RUNABLE;
+        else
+            assert(!"no runable process!");
     }
 }
 
@@ -192,14 +188,8 @@ void schedule() {
         } else {
             pp = pp_ready;
 
-            // 关中断
-            cli();
-
-            uvm_switch(pp); // 切换页表
             proc_switch(pp); // 切换进程
-
-            // 开中断
-            sti();
+            uvm_switch(pp); // 切换页表
 
             return;
         }
@@ -208,20 +198,16 @@ void schedule() {
 
 // 进程休眠
 void sleep() {
-    cli();
 
-    if (proc->state == P_RUNNING) {
-        proc->state = P_SLEEPING;
-    }
+    assert(proc->state == P_RUNNING);
+    proc->state = P_SLEEPING;
 
-    sti();
+    schedule();
 }
 
 // 唤醒进程
 void wakeup(uint8_t pid) {
     struct proc* pp;
-
-    cli();
 
     for (pp = pcblist; pp < &pcblist[NPROC]; pp++) {
         if (pp->pid == pid && pp->state == P_SLEEPING) {
@@ -229,8 +215,6 @@ void wakeup(uint8_t pid) {
             return;
         }
     }
-
-    sti();
 }
 
 // 进程销毁
@@ -251,36 +235,33 @@ int wait() {
     uint8_t has_child, pid;
     struct proc* pp;
 
-    cli();
+    for (;;) {
 
-    has_child = 0;
+        has_child = 0;
 
-    for (pp = pcblist; pp < &pcblist[NPROC]; pp++) {
-        if (pp->parent != proc) {
-            continue; // 没有子进程
+        for (pp = pcblist; pp < &pcblist[NPROC]; pp++) {
+            if (pp->parent != proc) {
+                continue; // 没有子进程
+            }
+
+            has_child = 1;
+
+            if (pp->state == P_ZOMBIE) {
+
+                pid = pp->pid;
+                proc_destroy(pp);
+
+                return pid; // 返回刚刚退出的子进程ID
+            }
         }
 
-        has_child = 1;
-
-        if (pp->state == P_ZOMBIE) {
-
-            pid = pp->pid;
-            proc_destroy(pp);
-
-            sti();
-
-            return pid; // 返回刚刚退出的子进程ID
+        if (!has_child || proc->state == P_ZOMBIE) {
+            return -1; // 无需等待一个将被杀死的进程
         }
+
+        sleep(); // 等待，这里不能阻塞，因为要防止中断重入
+
     }
-
-    if (!has_child || proc->state == P_ZOMBIE) {
-        sti();
-        return -1; // 无需等待一个将被杀死的进程
-    }
-
-    sleep(); // 等待，这里不能阻塞，因为要防止中断重入
-
-    sti();
 
     return -1;
 }
@@ -289,10 +270,7 @@ int wait() {
 void exit() {
     struct proc *pp;
 
-    cli();
-
     if (!proc->parent) { // init
-        sti();
         return;
     }
 
@@ -307,26 +285,19 @@ void exit() {
             }
         }
     }
-
-    sti();
 }
 
 // 杀死进程
 int kill(uint8_t pid) {
     struct proc *pp;
 
-    cli();
-
     for (pp = pcblist; pp < &pcblist[NPROC]; pp++) {
 
         if (pp->pid == pid) { // 找到要杀死的进程
             pp->state = P_ZOMBIE; // 标记为僵尸进程
-            sti();
             return 0;
         }
     }
-
-    sti();
 
     return -1;
 }
@@ -335,10 +306,7 @@ int kill(uint8_t pid) {
 int fork() {
     struct proc *child; // 子进程
 
-    cli();
-
     if ((child = proc_alloc()) == 0) {
-        sti();
         return -1; // 创建进程失败
     }
 
@@ -356,7 +324,6 @@ int fork() {
         pmm_free((uint32_t)child->stack);
         child->stack = 0;
         child->state = P_UNUSED;
-        sti();
         return -1; // 创建进程失败
     }
 
@@ -369,8 +336,6 @@ int fork() {
     strncpy(child->name, proc->name, sizeof(proc->name)); // 拷贝进程名
 
     child->state = P_RUNABLE; // 置状态为可运行
-
-    sti();
     
     return child->pid; // 返回子进程PID
 }
@@ -382,7 +347,7 @@ void irq_handler_clock(struct interrupt_frame *r) {
     if (!proc)
         return;
 
-    if (PROC_IS_RUNABLE(proc)) {
+    if (PROC_IS_RUNNING(proc)) {
         if (proc->ticks > 0) {
             proc->ticks--;
             return;
